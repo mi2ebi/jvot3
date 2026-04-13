@@ -1,0 +1,8 @@
+*.xml
+.DS_Store
+
+# idk what this is
+**/.idea/
+
+target
+test_diagnostics/bloti.txt

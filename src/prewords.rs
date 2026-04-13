@@ -1,0 +1,355 @@
+use std::sync::LazyLock;
+
+use fancy_regex::Regex as FancyRegex;
+use itertools::Itertools as _;
+
+use crate::{
+    data::{DIPHTHONGS, INITIAL, VALID, ZIHEVLA_INITIAL},
+    fli, flip,
+    jvofli::{
+        Jvofli,
+        Jvoflikle::{Jboraku, Regexfli},
+    },
+};
+
+/// Returns `true` if `c` is a hard consonant (any consonant except *'* and
+/// *.*).
+pub fn is_hard_consonant(c: char) -> bool { "bcdfgjklmnprstvxz".contains(c) }
+/// Returns `true` if `c` is an annotated onglide: *q* or *w*.
+pub fn is_onglide(c: char) -> bool { "qw".contains(c) }
+/// Returns `true` if `c` is a sonorant: one of *l m n r*.
+pub fn is_sonorant(c: char) -> bool { "lmnr".contains(c) }
+/// Returns `true` if `c` is a vowel: *a e i o u y*.
+pub fn is_vowel(c: char) -> bool { "aeiouy".contains(c) }
+
+/// Returns `true` if `s` is a permissible syllable onset.
+pub fn is_hard_onset(s: &str) -> bool {
+    match s.len() {
+        0 => true,
+        1 => s.chars().next().is_some_and(is_hard_consonant),
+        2 => INITIAL.contains(s),
+        3 => INITIAL.contains(&s[..2]) && ZIHEVLA_INITIAL.contains(&s[1..]),
+        _ => false,
+    }
+}
+
+/// Respells *i u* when they are onglides (as *q w*) or offglides (as *ĭ ŭ*).
+///
+/// # Errors
+/// Returns a [`Jboraku`] if any invalid falling diphthongs are used.
+pub fn mark_glides(input: &str) -> Result<String, Jvofli> {
+    let mut chars = input.chars().collect_vec();
+    for i in (0..chars.len()).rev() {
+        let c = chars[i];
+        if "ui".contains(c) {
+            let (on, off) = match c {
+                'i' => ('q', 'ĭ'),
+                'u' => ('w', 'ŭ'),
+                _ => unreachable!(),
+            };
+            if i != chars.len() - 1 && "aeiouy".contains(chars[i + 1]) {
+                chars[i] = on;
+            } else if i != 0
+                && let before = chars[i - 1]
+                && "aeoy".contains(before)
+            {
+                if DIPHTHONGS.contains(&*format!("{before}{c}")) {
+                    chars[i] = off;
+                    if chars.get(i + 1).is_some_and(|&c| c == on) {
+                        flip!(Jboraku, "{{{off}{on}}} is invalid");
+                    }
+                } else {
+                    flip!(Jboraku, "{{{before}{c}}} is not a diphthong");
+                }
+            }
+        }
+    }
+    Ok(chars.iter().collect::<String>())
+}
+
+/// Extracts a coda from a list of consonants, and splits the rest into
+/// consonantal syllables if possible.
+///
+/// # Errors
+/// Returns a [`Jboraku`] if the cluster can't be split.
+pub(crate) fn parse_previous_coda(chars: &[char]) -> Result<(Option<char>, Vec<String>), Jvofli> {
+    // if this were `pub` we'd also want this check here
+    // (it's already in `syllabify`)
+    // ```
+    // if let Some(&c) = chars.iter().find(|&&c| is_onglide(c)) {
+    //     flip!(Jboraku, "{{{c}}} can only occur as an (entire) onset");
+    // }
+    // ```
+    if chars.is_empty() {
+        return Ok((None, vec![]));
+    }
+    let prefix = chars.iter().collect::<String>();
+    // if the cluster starts with hardc+sonorant, the whole thing is consonantal
+    // syllables so there's nothing to regroup. otherwise the first hard consonant
+    // is the coda of the previous syllable
+    let (coda, mut i) =
+        if is_hard_consonant(chars[0]) && chars.get(1).is_some_and(|&c| is_sonorant(c)) {
+            (None, 0)
+        } else if is_hard_consonant(chars[0]) {
+            (Some(chars[0]), 1)
+        } else {
+            flip!(Jboraku, "{{{prefix}}} isn't a valid coda");
+        };
+    // everything else has to be consonantal syllables
+    let mut consonant_syllables = vec![];
+    while i < chars.len() {
+        if i + 1 < chars.len() && is_hard_consonant(chars[i]) && is_sonorant(chars[i + 1]) {
+            consonant_syllables.push(format!("{}{}", chars[i], chars[i + 1]));
+            i += 2;
+        } else {
+            flip!(Jboraku, "{{{prefix}}} isn't a valid coda");
+        }
+    }
+    Ok((coda, consonant_syllables))
+}
+
+/// Applies a parsed coda to the syllable list.
+///
+/// # Errors
+/// Returns a [`Jboraku`] if the cluster at the syllable boundary is invalid, or
+/// if there is no previous syllable for a coda to attach to.
+pub(crate) fn apply_coda(
+    real: &mut Vec<String>,
+    chars: &[char],
+    next_consonant: Option<char>,
+) -> Result<(), Jvofli> {
+    let (coda, consonant_syllables) = parse_previous_coda(chars)?;
+    if let Some(coda) = coda {
+        // regroup `coda` + the first consonant of what follows.
+        // "what follows" is either the first char of the first consonantal syllable,
+        // or if there aren't any, the first char of the onset we're about to push
+        let next = consonant_syllables.first().and_then(|s| s.chars().next()).or(next_consonant);
+        if let Some(c) = next
+            && !VALID.contains(&*format!("{coda}{c}"))
+        {
+            flip!(Jboraku, "{{{coda}{c}}} is an invalid cluster");
+        }
+        let Some(prev) = real.last_mut() else {
+            flip!(Jboraku, "there is no previous syllable for {{{coda}}} to belong to");
+        };
+        prev.push(coda);
+    }
+    for cs in consonant_syllables {
+        real.push(cs);
+    }
+    Ok(())
+}
+
+/// Matches the position immediately after a syllable nucleus.
+static POST_NUCLEUS: LazyLock<FancyRegex> =
+    LazyLock::new(|| FancyRegex::new("(?<=[aeiouy](?![ĭŭ])|[ĭŭ])").unwrap());
+
+/// Splits a unit in standard spelling into syllables.
+///
+/// # Errors
+/// Returns a [`Jboraku`] if the input can't be split into valid syllables, or a
+/// [`Regexfli`] if the nucleus splitter (what is this, particle physics?)
+/// backtracks too much, which shouldn't be possible.
+pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
+    let annotated = mark_glides(input)?;
+    if !annotated.chars().any(is_vowel) {
+        flip!(Jboraku, "{{{input}}} has no vowel");
+    }
+    let fake = POST_NUCLEUS
+        .split(&annotated)
+        .filter(|s| s.as_ref().map_or(true, |s| !s.is_empty()))
+        .map(|s| {
+            s.map(ToString::to_string).map_err(|_e| {
+                fli!(Regexfli, "the regex to check for nuclei backtracked too far somehow")
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut real = vec![];
+    for (i, piece) in fake.iter().enumerate() {
+        let chars = piece.chars().collect_vec();
+        // the last piece might be a coda since `POST_NUCLEUS` splits after nuclei
+        if i == fake.len() - 1 && !chars.iter().any(|&c| is_vowel(c)) {
+            apply_coda(&mut real, &chars, None)?;
+            continue;
+        }
+        // in case someone wrote a misplaced ĭ/ŭ
+        // (`mark_glides` shouldn't cause this)
+        if let Some(&last) = chars.last()
+            && matches!(last, 'ĭ' | 'ŭ')
+            && (chars.len() < 2 || !is_vowel(chars[chars.len() - 2]))
+        {
+            flip!(Jboraku, "{{{input}}} contains a {{{last}}} not after a vowel");
+        }
+        let nucleus_len = if matches!(chars.last(), Some('ĭ' | 'ŭ')) { 2 } else { 1 };
+        let onset_chars = &chars[..chars.len() - nucleus_len];
+        let nucleus = chars[chars.len() - nucleus_len..].iter().collect::<String>();
+        match onset_chars {
+            // null-onset syllables must be word-initial
+            [] => {
+                if i != 0 {
+                    flip!(Jboraku, "{{{input}}} contains a medial syllable without an onset");
+                }
+                real.push(nucleus);
+            }
+            // h-onset syllables must not
+            ['\''] => {
+                if i == 0 {
+                    flip!(Jboraku, "{{'}} can't appear word-initially");
+                }
+                real.push(format!("'{nucleus}"));
+            }
+            // `mark_glides` validates these
+            &[c] if is_onglide(c) => {
+                real.push(format!("{c}{nucleus}"));
+            }
+            // unambiguous hard onset
+            o if let o = o.iter().collect::<String>()
+                && is_hard_onset(&o) =>
+            {
+                real.push(format!("{o}{nucleus}"));
+            }
+            // evil q/w/'
+            o if let Some(c) = o.iter().find(|&&c| is_onglide(c) || c == '\'') => {
+                flip!(Jboraku, "{{{c}}} may not be in consonant clusters");
+            }
+            // the scary case.
+            // try treating each suffix of the onset (longest first) as a hard onset, assuming the
+            // rest is the previous syllable's coda, and take the first split that works.
+            // the `find_map` mutates `real` as a side effect if it does work
+            _ => {
+                let mut last_err = None;
+                let Some(syllable) = (1..=onset_chars.len().min(3)).rev().find_map(|suffix_len| {
+                    let hard_onset =
+                        onset_chars[onset_chars.len() - suffix_len..].iter().collect::<String>();
+                    if !is_hard_onset(&hard_onset) {
+                        return None;
+                    }
+                    let prefix = &onset_chars[..onset_chars.len() - suffix_len];
+                    match apply_coda(&mut real, prefix, hard_onset.chars().next()) {
+                        Ok(()) => Some(format!("{hard_onset}{nucleus}")),
+                        Err(e) => {
+                            last_err = last_err.clone().or(Some(e));
+                            None
+                        }
+                    }
+                }) else {
+                    return Err(last_err.unwrap_or_else(|| unreachable!()));
+                };
+                real.push(syllable);
+            }
+        }
+    }
+    Ok(real)
+}
+
+/// Groups syllables into jboraku, runs of syllables where the first one has a
+/// non-*'* onset and the rest have *'* onsets.
+pub fn jborakufy(syllables: &[String]) -> Vec<String> {
+    let mut result: Vec<String> = vec![];
+    for syll in syllables {
+        if syll.starts_with('\'') {
+            match result.last_mut() {
+                Some(prev) => prev.push_str(syll),
+                None => result.push(syll.clone()),
+            }
+        } else {
+            result.push(syll.clone());
+        }
+    }
+    result
+}
+
+/// Tests.
+mod tests {
+    #![cfg(test)]
+    use super::*;
+
+    macro_rules! ok {
+        (mark_glides; $in:literal => $out:literal) => {
+            assert_eq!(mark_glides($in), Ok($out.to_string()));
+        };
+        ($f:ident; $in:literal => $($out:literal),+) => {
+            assert_eq!($f($in), Ok([$($out),+].iter().map(ToString::to_string).collect_vec()));
+        };
+    }
+    macro_rules! err {
+        ($f:ident; $in:literal) => {
+            let res = $f($in);
+            assert!(res.is_err(), "{res:?}");
+        };
+    }
+
+    #[test]
+    fn t_markglides_plukauaii_ok() {
+        ok!(mark_glides; "plukauaii" => "plukawaqi");
+    }
+    #[test]
+    fn t_markglides_12u_ok() {
+        ok!(mark_glides; "uuuuuuuuuuuu" => "wuwuwuwuwuwu");
+    }
+    #[test]
+    fn t_markglides_13u_ok() {
+        ok!(mark_glides; "uuuuuuuuuuuuu" => "uwuwuwuwuwuwu");
+    }
+    #[test]
+    fn t_markglides_auia_ok() {
+        ok!(mark_glides; "auia" => "aŭqa");
+    }
+    #[test]
+    fn t_markglides_aiia_err() {
+        err!(mark_glides; "aiia");
+    }
+    #[test]
+    fn t_markglides_eu_err() {
+        err!(mark_glides; "eu");
+    }
+    #[test]
+    fn t_markglides_eua_ok() {
+        ok!(mark_glides; "eua" => "ewa");
+    }
+
+    #[test]
+    fn t_syllabify_latkerlo_ok() {
+        ok!(syllabify; "latkerlo" => "lat", "ker", "lo");
+    }
+    #[test]
+    fn t_syllabify_sakprtlfmsngeha_ok() {
+        ok!(syllabify; "sakprtlfmsnge'a" => "sak", "pr", "tl", "fm", "sn", "ge", "'a");
+    }
+    #[test]
+    fn t_syllabify_glek_ok() {
+        ok!(syllabify; "glek" => "glek");
+    }
+    #[test]
+    fn t_syllabify_apba_err() {
+        err!(syllabify; "apba"); // -pb-
+    }
+    #[test]
+    fn t_syllabify_apqa_err() {
+        err!(syllabify; "apqa"); // -pq-
+    }
+    #[test]
+    fn t_syllabify_apyb_ok() {
+        ok!(syllabify; "apyb" => "a", "pyb");
+    }
+    #[test]
+    fn t_syllabify_apb_err() {
+        err!(syllabify; "apb");
+    }
+    #[test]
+    fn t_syllabify_aplbra_ok() {
+        ok!(syllabify; "aplbra" => "a", "pl", "bra");
+    }
+    #[test]
+    fn t_syllabify_an_ok() {
+        ok!(syllabify; "an" => "an");
+    }
+    #[test]
+    fn t_syllabify_ant_err() {
+        err!(syllabify; "ant"); // syllables can end in at most 1 consonant
+    }
+    #[test]
+    fn t_syllabify_antka_err() {
+        err!(syllabify; "antka"); // ant,ka and an,tka are both illegal
+    }
+}
