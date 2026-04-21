@@ -3,7 +3,6 @@ use std::fmt::{self, Debug, Display};
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Jvoflikle {
     Jboraku,
-    Regexfli,
 }
 
 #[derive(PartialEq, Eq, Clone)]

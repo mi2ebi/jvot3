@@ -1,6 +1,11 @@
 use latkerlo_jvotci::prewords::syllabify;
 
+fn the(s: &str) {
+    println!("{s} -> {:?}", syllabify(s));
+}
+
 fn main() {
-    //
-    println!("{:?}", syllabify("mi'au"));
+    the("mtsxetas");
+    the("beiao");
+    the("a4a");
 }

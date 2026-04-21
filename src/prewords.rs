@@ -6,10 +6,7 @@ use itertools::Itertools as _;
 use crate::{
     data::{DIPHTHONGS, INITIAL, VALID, ZIHEVLA_INITIAL},
     fli, flip,
-    jvofli::{
-        Jvofli,
-        Jvoflikle::{Jboraku, Regexfli},
-    },
+    jvofli::{Jvofli, Jvoflikle::Jboraku},
 };
 
 /// Returns `true` if `c` is a hard consonant (any consonant except *'* and
@@ -17,10 +14,25 @@ use crate::{
 pub fn is_hard_consonant(c: char) -> bool { "bcdfgjklmnprstvxz".contains(c) }
 /// Returns `true` if `c` is an annotated onglide: *q* or *w*.
 pub fn is_onglide(c: char) -> bool { "qw".contains(c) }
+/// Returns `true` if `c` is an annotated offglide: *ĭ* or *ŭ*.
+pub fn is_offglide(c: char) -> bool { "ĭŭ".contains(c) }
 /// Returns `true` if `c` is a sonorant: one of *l m n r*.
 pub fn is_sonorant(c: char) -> bool { "lmnr".contains(c) }
 /// Returns `true` if `c` is a vowel: *a e i o u y*.
 pub fn is_vowel(c: char) -> bool { "aeiouy".contains(c) }
+
+/// Checks if `s` only contains Lojban letters and returns `Ok(())` if so.
+///
+/// # Errors
+/// Returns a [`Jboraku`] if it doesn't.
+pub fn check_lojban_only(s: &str) -> Result<(), Jvofli> {
+    if let Some(bad) = s.chars().find(|&c| {
+        !(is_vowel(c) || is_hard_consonant(c) || is_onglide(c) || is_offglide(c) || c == '\'')
+    }) {
+        flip!(Jboraku, "{{{s}}} contains non-lojban characters such as {{{bad}}}")
+    }
+    Ok(())
+}
 
 /// Returns `true` if `s` is a permissible syllable onset.
 pub fn is_hard_onset(s: &str) -> bool {
@@ -59,7 +71,7 @@ pub fn mark_glides(input: &str) -> Result<String, Jvofli> {
                         flip!(Jboraku, "{{{off}{on}}} is invalid");
                     }
                 } else {
-                    flip!(Jboraku, "{{{before}{c}}} is not a diphthong");
+                    flip!(Jboraku, "{{{before}{c}}} is not a valid diphthong");
                 }
             }
         }
@@ -72,7 +84,7 @@ pub fn mark_glides(input: &str) -> Result<String, Jvofli> {
 ///
 /// # Errors
 /// Returns a [`Jboraku`] if the cluster can't be split.
-pub(crate) fn parse_previous_coda(chars: &[char]) -> Result<(Option<char>, Vec<String>), Jvofli> {
+fn parse_previous_coda(chars: &[char]) -> Result<(Option<char>, Vec<String>), Jvofli> {
     // if this were `pub` we'd also want this check here
     // (it's already in `syllabify`)
     // ```
@@ -102,7 +114,7 @@ pub(crate) fn parse_previous_coda(chars: &[char]) -> Result<(Option<char>, Vec<S
             consonant_syllables.push(format!("{}{}", chars[i], chars[i + 1]));
             i += 2;
         } else {
-            flip!(Jboraku, "{{{prefix}}} isn't a valid coda");
+            flip!(Jboraku, "{{{prefix}}} isn't some consonantal syllables");
         }
     }
     Ok((coda, consonant_syllables))
@@ -113,7 +125,7 @@ pub(crate) fn parse_previous_coda(chars: &[char]) -> Result<(Option<char>, Vec<S
 /// # Errors
 /// Returns a [`Jboraku`] if the cluster at the syllable boundary is invalid, or
 /// if there is no previous syllable for a coda to attach to.
-pub(crate) fn apply_coda(
+fn apply_coda(
     real: &mut Vec<String>,
     chars: &[char],
     next_consonant: Option<char>,
@@ -130,7 +142,7 @@ pub(crate) fn apply_coda(
             flip!(Jboraku, "{{{coda}{c}}} is an invalid cluster");
         }
         let Some(prev) = real.last_mut() else {
-            flip!(Jboraku, "there is no previous syllable for {{{coda}}} to belong to");
+            flip!(Jboraku, "{{{coda}}} is a word-initial coda");
         };
         prev.push(coda);
     }
@@ -151,17 +163,16 @@ static POST_NUCLEUS: LazyLock<FancyRegex> =
 /// [`Regexfli`] if the nucleus splitter (what is this, particle physics?)
 /// backtracks too much, which shouldn't be possible.
 pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
+    check_lojban_only(input)?;
     let annotated = mark_glides(input)?;
     if !annotated.chars().any(is_vowel) {
-        flip!(Jboraku, "{{{input}}} has no vowel");
+        flip!(Jboraku, "{{{input}}} has no vowels");
     }
     let fake = POST_NUCLEUS
         .split(&annotated)
         .filter(|s| s.as_ref().map_or(true, |s| !s.is_empty()))
         .map(|s| {
-            s.map(ToString::to_string).map_err(|_e| {
-                fli!(Regexfli, "the regex to check for nuclei backtracked too far somehow")
-            })
+            s.map(ToString::to_string).map_err(|_e| unreachable!("you broke the nucleus splitter!"))
         })
         .collect::<Result<Vec<_>, _>>()?;
     let mut real = vec![];
@@ -178,7 +189,7 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
             && matches!(last, 'ĭ' | 'ŭ')
             && (chars.len() < 2 || !is_vowel(chars[chars.len() - 2]))
         {
-            flip!(Jboraku, "{{{input}}} contains a {{{last}}} not after a vowel");
+            flip!(Jboraku, "{{{last}}} must come after a vowel");
         }
         let nucleus_len = if matches!(chars.last(), Some('ĭ' | 'ŭ')) { 2 } else { 1 };
         let onset_chars = &chars[..chars.len() - nucleus_len];
@@ -187,7 +198,7 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
             // null-onset syllables must be word-initial
             [] => {
                 if i != 0 {
-                    flip!(Jboraku, "{{{input}}} contains a medial syllable without an onset");
+                    flip!(Jboraku, "{{{piece}}} lacks an onset");
                 }
                 real.push(nucleus);
             }
@@ -199,7 +210,7 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
                 real.push(format!("'{nucleus}"));
             }
             // `mark_glides` validates these
-            &[c] if is_onglide(c) => {
+            [c] if is_onglide(*c) => {
                 real.push(format!("{c}{nucleus}"));
             }
             // unambiguous hard onset
@@ -210,32 +221,44 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
             }
             // evil q/w/'
             o if let Some(c) = o.iter().find(|&&c| is_onglide(c) || c == '\'') => {
-                flip!(Jboraku, "{{{c}}} may not be in consonant clusters");
+                flip!(Jboraku, "{{{c}}} can't be adjacent to consonants");
             }
             // the scary case.
             // try treating each suffix of the onset (longest first) as a hard onset, assuming the
-            // rest is the previous syllable's coda, and take the first split that works.
-            // the `find_map` mutates `real` as a side effect if it does work
+            // rest is the previous syllable's coda, and take the first split that works
             _ => {
-                let mut last_err = None;
-                let Some(syllable) = (1..=onset_chars.len().min(3)).rev().find_map(|suffix_len| {
-                    let hard_onset =
-                        onset_chars[onset_chars.len() - suffix_len..].iter().collect::<String>();
-                    if !is_hard_onset(&hard_onset) {
-                        return None;
-                    }
-                    let prefix = &onset_chars[..onset_chars.len() - suffix_len];
-                    match apply_coda(&mut real, prefix, hard_onset.chars().next()) {
-                        Ok(()) => Some(format!("{hard_onset}{nucleus}")),
-                        Err(e) => {
-                            last_err = last_err.clone().or(Some(e));
-                            None
+                let mut last_err = fli!(Jboraku, "uh oh");
+                let Some(suffix_len) =
+                    (1..=onset_chars.len().min(3)).rev().find_map(|suffix_len| {
+                        let hard_onset: String =
+                            onset_chars[onset_chars.len() - suffix_len..].iter().collect();
+                        if !is_hard_onset(&hard_onset) {
+                            return None;
                         }
+                        let prefix = &onset_chars[..onset_chars.len() - suffix_len];
+                        let (coda, consonantal_syllables) =
+                            parse_previous_coda(prefix).map_err(|e| last_err = e).ok()?;
+                        if consonantal_syllables.is_empty()
+                            && let Some(coda) = coda
+                            && let Some(c) = hard_onset.chars().next()
+                            && !VALID.contains(&*format!("{coda}{c}"))
+                        {
+                            last_err = fli!(Jboraku, "{{{coda}{c}}} is an invalid cluster");
+                            return None;
+                        }
+                        Some(suffix_len)
+                    })
+                else {
+                    if last_err == fli!(Jboraku, "uh oh") {
+                        unreachable!();
                     }
-                }) else {
-                    return Err(last_err.unwrap_or_else(|| unreachable!()));
+                    return Err(last_err);
                 };
-                real.push(syllable);
+                let hard_onset: String =
+                    onset_chars[onset_chars.len() - suffix_len..].iter().collect();
+                let prefix = &onset_chars[..onset_chars.len() - suffix_len];
+                apply_coda(&mut real, prefix, hard_onset.chars().next())?;
+                real.push(format!("{hard_onset}{nucleus}"));
             }
         }
     }
