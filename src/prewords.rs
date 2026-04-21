@@ -232,7 +232,7 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
             // try treating each suffix of the onset (longest first) as a hard onset, assuming the
             // rest is the previous syllable's coda, and take the first split that works
             _ => {
-                let mut last_err = fli!(Jboraku, "uh oh");
+                let mut last_err = None;
                 let Some(suffix_len) =
                     (1..=onset_chars.len().min(3)).rev().find_map(|suffix_len| {
                         let hard_onset: String =
@@ -242,22 +242,21 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
                         }
                         let prefix = &onset_chars[..onset_chars.len() - suffix_len];
                         let (coda, consonantal_syllables) =
-                            parse_previous_coda(prefix).map_err(|e| last_err = e).ok()?;
+                            parse_previous_coda(prefix).map_err(|e| last_err = Some(e)).ok()?;
                         if consonantal_syllables.is_empty()
                             && let Some(coda) = coda
                             && let Some(c) = hard_onset.chars().next()
                             && !VALID.contains(&*format!("{coda}{c}"))
                         {
-                            last_err = fli!(Jboraku, "{{{coda}{c}}} is an invalid cluster");
+                            last_err = Some(fli!(Jboraku, "{{{coda}{c}}} is an invalid cluster"));
                             return None;
                         }
                         Some(suffix_len)
                     })
                 else {
-                    if last_err == fli!(Jboraku, "uh oh") {
-                        unreachable!("[syllabify] last_err should have been assigned by now");
-                    }
-                    return Err(last_err);
+                    return Err(last_err.unwrap_or_else(|| {
+                        unreachable!("[syllabify] `last_err` should be `Some` by now")
+                    }));
                 };
                 let hard_onset: String =
                     onset_chars[onset_chars.len() - suffix_len..].iter().collect();
