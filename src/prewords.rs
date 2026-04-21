@@ -57,7 +57,9 @@ pub fn mark_glides(input: &str) -> Result<String, Jvofli> {
             let (on, off) = match c {
                 'i' => ('q', 'ĭ'),
                 'u' => ('w', 'ŭ'),
-                _ => unreachable!(),
+                _ => {
+                    unreachable!("[mark_glides] only {{i/u}} should get here but this is a {{{c}}}")
+                }
             };
             if i != chars.len() - 1 && "aeiouy".contains(chars[i + 1]) {
                 chars[i] = on;
@@ -139,7 +141,10 @@ fn apply_coda(
         if let Some(c) = next
             && !VALID.contains(&*format!("{coda}{c}"))
         {
-            flip!(Jboraku, "{{{coda}{c}}} is an invalid cluster");
+            // flip!(Jboraku, "{{{coda}{c}}} is an invalid cluster");
+            unreachable!(
+                "[apply_coda] scary case should have checked validity of {{{coda}{c}}} already"
+            );
         }
         let Some(prev) = real.last_mut() else {
             flip!(Jboraku, "{{{coda}}} is a word-initial coda");
@@ -159,9 +164,7 @@ static POST_NUCLEUS: LazyLock<FancyRegex> =
 /// Splits a unit in standard spelling into syllables.
 ///
 /// # Errors
-/// Returns a [`Jboraku`] if the input can't be split into valid syllables, or a
-/// [`Regexfli`] if the nucleus splitter (what is this, particle physics?)
-/// backtracks too much, which shouldn't be possible.
+/// Returns a [`Jboraku`] if the input can't be split into valid syllables.
 pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
     check_lojban_only(input)?;
     let annotated = mark_glides(input)?;
@@ -172,7 +175,9 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
         .split(&annotated)
         .filter(|s| s.as_ref().map_or(true, |s| !s.is_empty()))
         .map(|s| {
-            s.map(ToString::to_string).map_err(|_e| unreachable!("you broke the nucleus splitter!"))
+            s.map(ToString::to_string).map_err(|e| {
+                unreachable!("[syllabify] the nucleus splitter regex shouldn't break. {e}")
+            })
         })
         .collect::<Result<Vec<_>, _>>()?;
     let mut real = vec![];
@@ -186,7 +191,7 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
         // in case someone wrote a misplaced ĭ/ŭ
         // (`mark_glides` shouldn't cause this)
         if let Some(&last) = chars.last()
-            && matches!(last, 'ĭ' | 'ŭ')
+            && "ĭŭ".contains(last)
             && (chars.len() < 2 || !is_vowel(chars[chars.len() - 2]))
         {
             flip!(Jboraku, "{{{last}}} must come after a vowel");
@@ -250,7 +255,7 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
                     })
                 else {
                     if last_err == fli!(Jboraku, "uh oh") {
-                        unreachable!();
+                        unreachable!("[syllabify] last_err should have been assigned by now");
                     }
                     return Err(last_err);
                 };
@@ -280,6 +285,14 @@ pub fn jborakufy(syllables: &[String]) -> Vec<String> {
         }
     }
     result
+}
+
+/// Returns `true` if `s` is some cmavo (jboraku each with at most 1 hard
+/// consonant).
+pub fn is_some_cmavo(s: &str) -> bool {
+    syllabify(s).is_ok_and(|y| {
+        jborakufy(&y).iter().all(|r| r.chars().filter(|c| is_hard_consonant(*c)).count() <= 1)
+    })
 }
 
 /// Tests.
