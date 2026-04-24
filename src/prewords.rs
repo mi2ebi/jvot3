@@ -87,39 +87,51 @@ pub fn mark_glides(input: &str) -> Result<String, Jvofli> {
 /// # Errors
 /// Returns a [`Jboraku`] if the cluster can't be split.
 fn parse_previous_coda(chars: &[char]) -> Result<(Option<char>, Vec<String>), Jvofli> {
-    // if this were `pub` we'd also want this check here
-    // (it's already in `syllabify`)
-    // ```
-    // if let Some(&c) = chars.iter().find(|&&c| is_onglide(c)) {
-    //     flip!(Jboraku, "{{{c}}} can only occur as an (entire) onset");
-    // }
-    // ```
     if chars.is_empty() {
         return Ok((None, vec![]));
     }
-    let prefix = chars.iter().collect::<String>();
-    // if the cluster starts with hardc+sonorant, the whole thing is consonantal
-    // syllables so there's nothing to regroup. otherwise the first hard consonant
-    // is the coda of the previous syllable
-    let (coda, mut i) =
-        if is_hard_consonant(chars[0]) && chars.get(1).is_some_and(|&c| is_sonorant(c)) {
-            (None, 0)
-        } else if is_hard_consonant(chars[0]) {
-            (Some(chars[0]), 1)
-        } else {
-            flip!(Jboraku, "{{{prefix}}} isn't a valid coda");
+    if is_hard_consonant(chars[0])
+        && (chars.len() - 1).is_multiple_of(2)
+        && let Ok(syllables) = as_consonantal_syllables(&chars[1..])
+    {
+        return Ok((Some(chars[0]), syllables));
+    }
+    if chars.len().is_multiple_of(2)
+        && let Ok(syllables) = as_consonantal_syllables(chars)
+    {
+        return Ok((None, syllables));
+    }
+    flip!(
+        Jboraku,
+        "{{{}}} can't be parsed as an optional coda followed by some consonantal syllables",
+        chars.iter().collect::<String>()
+    );
+}
+
+/// Nicely packages consonantal syllables.
+///
+/// # Errors
+/// Returns a [`Jboraku`] if there is anything that isn't a consonant syllable.
+fn as_consonantal_syllables(chars: &[char]) -> Result<Vec<String>, Jvofli> {
+    let string = String::from_iter(chars);
+    if chars.is_empty() {
+        return Ok(vec![]);
+    }
+    if !chars.len().is_multiple_of(2) {
+        unreachable!("[as_consonantal_syllables] odd number of chars in {{{string}}}");
+    }
+    let mut syllables = vec![];
+    for chunk in chars.chunks(2) {
+        let &[first, second] = chunk else {
+            unreachable!("[as_consonantal_syllables] chunks must be length 2");
         };
-    // everything else has to be consonantal syllables
-    let mut consonant_syllables = vec![];
-    while i < chars.len() {
-        if i + 1 < chars.len() && is_hard_consonant(chars[i]) && is_sonorant(chars[i + 1]) {
-            consonant_syllables.push(format!("{}{}", chars[i], chars[i + 1]));
-            i += 2;
+        if is_hard_consonant(first) && is_sonorant(second) {
+            syllables.push(chunk.iter().collect());
         } else {
-            flip!(Jboraku, "{{{prefix}}} isn't some consonantal syllables");
+            flip!(Jboraku, "{{{}}} is not a consonantal syllable", String::from_iter(chunk));
         }
     }
-    Ok((coda, consonant_syllables))
+    Ok(syllables)
 }
 
 /// Applies a parsed coda to the syllable list.
@@ -357,11 +369,11 @@ mod tests {
     }
     #[test]
     fn t_syllabify_apba_err() {
-        err!(syllabify; "apba"); // -pb-
+        err!(syllabify; "apba");
     }
     #[test]
     fn t_syllabify_apqa_err() {
-        err!(syllabify; "apqa"); // -pq-
+        err!(syllabify; "apqa");
     }
     #[test]
     fn t_syllabify_apyb_ok() {
@@ -386,5 +398,13 @@ mod tests {
     #[test]
     fn t_syllabify_antka_err() {
         err!(syllabify; "antka"); // ant,ka and an,tka are both illegal
+    }
+    #[test]
+    fn t_syllabify_cipnrstrigi_ok() {
+        ok!(syllabify; "cipnrstrigi" => "cip", "nr", "stri", "gi");
+    }
+    #[test]
+    fn t_syllabify_apcnli_ok() {
+        ok!(syllabify; "apcnli" => "ap", "cn", "li");
     }
 }

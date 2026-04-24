@@ -4,8 +4,4 @@ fn the(s: &str) {
     println!("{s} -> {:?}", syllabify(s));
 }
 
-fn main() {
-    the("mtsxetas");
-    the("beiao");
-    the("a4a");
-}
+fn main() { the("citknrge'a"); }
