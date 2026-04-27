@@ -144,6 +144,11 @@ fn apply_coda(
     chars: &[char],
     next_consonant: Option<char>,
 ) -> Result<(), Jvofli> {
+    if next_consonant.is_none()
+        && let Some(c) = chars.iter().find(|&&c| is_onglide(c) || c == '\'')
+    {
+        flip!(Jboraku, "{{{c}}} can't appear in codas");
+    }
     let (coda, consonant_syllables) = parse_previous_coda(chars)?;
     if let Some(coda) = coda {
         // regroup `coda` + the first consonant of what follows.
