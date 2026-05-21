@@ -1,6 +1,3 @@
-use std::sync::LazyLock;
-
-use fancy_regex::Regex as FancyRegex;
 use itertools::Itertools as _;
 
 use crate::{
@@ -113,12 +110,14 @@ fn parse_previous_coda(chars: &[char]) -> Result<(Option<char>, Vec<String>), Jv
 /// # Errors
 /// Returns a [`Jboraku`] if there is anything that isn't a consonant syllable.
 fn as_consonantal_syllables(chars: &[char]) -> Result<Vec<String>, Jvofli> {
-    let string = String::from_iter(chars);
     if chars.is_empty() {
         return Ok(vec![]);
     }
     if !chars.len().is_multiple_of(2) {
-        unreachable!("[as_consonantal_syllables] odd number of chars in {{{string}}}");
+        unreachable!(
+            "[as_consonantal_syllables] odd number of chars in {{{}}}",
+            String::from_iter(chars)
+        );
     }
     let mut syllables = vec![];
     for chunk in chars.chunks(2) {
@@ -174,9 +173,24 @@ fn apply_coda(
     Ok(())
 }
 
-/// Matches the position immediately after a syllable nucleus.
-static POST_NUCLEUS: LazyLock<FancyRegex> =
-    LazyLock::new(|| FancyRegex::new("(?<=[aeiouy](?![ĭŭ])|[ĭŭ])").unwrap());
+/// Splits some text after diphthongs and single vowels.
+fn split_after_nuclei(s: &str) -> Vec<&str> {
+    let mut pieces = vec![];
+    let mut start = 0;
+    let mut chars = s.char_indices().peekable();
+    while let Some((_, c)) = chars.next() {
+        let next = chars.peek().map(|&(_, c)| c);
+        if is_offglide(c) || (is_vowel(c) && !next.is_some_and(is_offglide)) {
+            let end = chars.peek().map_or(s.len(), |&(i, _)| i);
+            pieces.push(&s[start..end]);
+            start = end;
+        }
+    }
+    if start < s.len() {
+        pieces.push(&s[start..]);
+    }
+    pieces
+}
 
 /// Splits a unit in standard spelling into syllables.
 ///
@@ -188,15 +202,7 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
     if !annotated.chars().any(is_vowel) {
         flip!(Jboraku, "{{{input}}} has no vowels");
     }
-    let fake = POST_NUCLEUS
-        .split(&annotated)
-        .filter(|s| s.as_ref().map_or(true, |s| !s.is_empty()))
-        .map(|s| {
-            s.map(ToString::to_string).map_err(|e| {
-                unreachable!("[syllabify] the nucleus splitter regex shouldn't break. {e}")
-            })
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    let fake = split_after_nuclei(&annotated);
     let mut real = vec![];
     for (i, piece) in fake.iter().enumerate() {
         let chars = piece.chars().collect_vec();
