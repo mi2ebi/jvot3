@@ -43,13 +43,11 @@ fn find(p: &str, n: &str) {
 
 fn main() {
     /*
-                 regex   manual
-    ---------------------------
-    easy       |  2.49     6.02
-    hard       |  1.95     3.17
-    impossible |  2.96     4.70
+    easy       7.21 MB/s
+    hard       3.79 MB/s
+    less hard  6.42 MB/s
      */
     find("ua", "easy mode");
     find("xazdmru", "hard mode");
-    find("xazblblblblblblblblblblna", "impossible mode?");
+    find("xazblblblblblblblblblblna", "less hard mode");
 }

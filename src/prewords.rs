@@ -1,22 +1,13 @@
 use itertools::Itertools as _;
 
 use crate::{
-    data::{DIPHTHONGS, INITIAL, VALID, ZIHEVLA_INITIAL},
+    data::{
+        is_diphthong, is_hard_consonant, is_initial, is_offglide, is_onglide, is_sonorant,
+        is_valid, is_vowel, is_zihevla_initial,
+    },
     fli, flip,
     jvofli::{Jvofli, Jvoflikle::Jboraku},
 };
-
-/// Returns `true` if `c` is a hard consonant (any consonant except *'* and
-/// *.*).
-pub fn is_hard_consonant(c: char) -> bool { "bcdfgjklmnprstvxz".contains(c) }
-/// Returns `true` if `c` is an annotated onglide: *q* or *w*.
-pub fn is_onglide(c: char) -> bool { "qw".contains(c) }
-/// Returns `true` if `c` is an annotated offglide: *ĭ* or *ŭ*.
-pub fn is_offglide(c: char) -> bool { "ĭŭ".contains(c) }
-/// Returns `true` if `c` is a sonorant: one of *l m n r*.
-pub fn is_sonorant(c: char) -> bool { "lmnr".contains(c) }
-/// Returns `true` if `c` is a vowel: *a e i o u y*.
-pub fn is_vowel(c: char) -> bool { "aeiouy".contains(c) }
 
 /// Checks if `s` only contains Lojban letters and returns `Ok(())` if so.
 ///
@@ -36,8 +27,8 @@ pub fn is_hard_onset(s: &str) -> bool {
     match s.len() {
         0 => true,
         1 => s.chars().next().is_some_and(is_hard_consonant),
-        2 => INITIAL.contains(s),
-        3 => INITIAL.contains(&s[..2]) && ZIHEVLA_INITIAL.contains(&s[1..]),
+        2 => is_initial(s),
+        3 => is_initial(&s[..2]) && is_zihevla_initial(&s[1..]),
         _ => false,
     }
 }
@@ -64,7 +55,7 @@ pub fn mark_glides(input: &str) -> Result<String, Jvofli> {
                 && let before = chars[i - 1]
                 && "aeoy".contains(before)
             {
-                if DIPHTHONGS.contains(&*format!("{before}{c}")) {
+                if is_diphthong(&format!("{before}{c}")) {
                     chars[i] = off;
                     if chars.get(i + 1).is_some_and(|&c| c == on) {
                         flip!(Jboraku, "{{{off}{on}}} is invalid");
@@ -155,7 +146,7 @@ fn apply_coda(
         // or if there aren't any, the first char of the onset we're about to push
         let next = consonant_syllables.first().and_then(|s| s.chars().next()).or(next_consonant);
         if let Some(c) = next
-            && !VALID.contains(&*format!("{coda}{c}"))
+            && !is_valid(&format!("{coda}{c}"))
         {
             // flip!(Jboraku, "{{{coda}{c}}} is an invalid cluster");
             unreachable!(
@@ -256,7 +247,7 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
             // rest is the previous syllable's coda, and take the first split that works
             _ => {
                 let mut last_err = None;
-                let Some(suffix_len) =
+                let Some((suffix_len, hard_onset)) =
                     (1..=onset_chars.len().min(3)).rev().find_map(|suffix_len| {
                         let hard_onset: String =
                             onset_chars[onset_chars.len() - suffix_len..].iter().collect();
@@ -269,20 +260,18 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
                         if consonantal_syllables.is_empty()
                             && let Some(coda) = coda
                             && let Some(c) = hard_onset.chars().next()
-                            && !VALID.contains(&*format!("{coda}{c}"))
+                            && !is_valid(&format!("{coda}{c}"))
                         {
                             last_err = Some(fli!(Jboraku, "{{{coda}{c}}} is an invalid cluster"));
                             return None;
                         }
-                        Some(suffix_len)
+                        Some((suffix_len, hard_onset))
                     })
                 else {
                     return Err(last_err.unwrap_or_else(|| {
                         unreachable!("[syllabify] `last_err` should be `Some` by now")
                     }));
                 };
-                let hard_onset: String =
-                    onset_chars[onset_chars.len() - suffix_len..].iter().collect();
                 let prefix = &onset_chars[..onset_chars.len() - suffix_len];
                 apply_coda(&mut real, prefix, hard_onset.chars().next())?;
                 real.push(format!("{hard_onset}{nucleus}"));
