@@ -7,6 +7,7 @@ description = "Tools for creating and decomposing Lojban lujvo."
 repository = "https://github.com/latkerlo/latkerlo-jvotci"
 keywords = ["lojban", "lujvo", "linguistics", "cli"]
 categories = ["text-processing", "parser-implementations", "command-line-utilities"]
+rust-version = "1.95.0"
 
 # [[bin]]
 # name = "jvotci"

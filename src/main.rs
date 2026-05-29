@@ -1,5 +1,3 @@
-#![feature(duration_millis_float)]
-
 use std::time::{Duration, Instant};
 
 use latkerlo_jvotci::prewords::syllabify;
@@ -22,7 +20,11 @@ fn find(p: &str, n: &str) {
     loop {
         let input = p.repeat(high);
         let avg = avg(&input);
-        println!("[exp] n {high:7}, len {:8}, avg {:8.3?}ms", input.len(), avg.as_millis_f32());
+        println!(
+            "[exp] n {high:7}, len {:8}, avg {:8.3}ms",
+            input.len(),
+            avg.as_secs_f32() * 1000.
+        );
         if avg > TARGET {
             break;
         }
@@ -33,7 +35,7 @@ fn find(p: &str, n: &str) {
         let mid = low.midpoint(high);
         let input = p.repeat(mid);
         let avg = avg(&input);
-        println!("[bin] n {mid:7}, len {:8}, avg {:8.3?}ms", input.len(), avg.as_millis_f32());
+        println!("[bin] n {mid:7}, len {:8}, avg {:8.3}ms", input.len(), avg.as_secs_f32() * 1000.);
         if avg > TARGET {
             high = mid;
         } else {
