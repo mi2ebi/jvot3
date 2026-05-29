@@ -2,8 +2,8 @@ use itertools::Itertools as _;
 
 use crate::{
     data::{
-        is_diphthong, is_hard_consonant, is_initial, is_offglide, is_onglide, is_sonorant,
-        is_valid, is_vowel, is_zihevla_initial,
+        is_diphthong, is_hard_consonant, is_hard_onset, is_offglide, is_onglide, is_sonorant,
+        is_valid, is_vowel,
     },
     fli, flip,
     jvofli::{Jvofli, Jvoflikle::Jboraku},
@@ -22,17 +22,6 @@ pub fn check_lojban_only(s: &str) -> Result<(), Jvofli> {
     Ok(())
 }
 
-/// Returns `true` if `s` is a permissible syllable onset.
-pub fn is_hard_onset(s: &str) -> bool {
-    match s.len() {
-        0 => true,
-        1 => s.chars().next().is_some_and(is_hard_consonant),
-        2 => is_initial(s),
-        3 => is_initial(&s[..2]) && is_zihevla_initial(&s[1..]),
-        _ => false,
-    }
-}
-
 /// Respells *i u* when they are onglides (as *q w*) or offglides (as *ĭ ŭ*).
 ///
 /// # Errors
@@ -41,7 +30,7 @@ pub fn mark_glides(input: &str) -> Result<String, Jvofli> {
     let mut chars = input.chars().collect_vec();
     for i in (0..chars.len()).rev() {
         let c = chars[i];
-        if "ui".contains(c) {
+        if matches!(c, 'i' | 'u') {
             let (on, off) = match c {
                 'i' => ('q', 'ĭ'),
                 'u' => ('w', 'ŭ'),
@@ -49,11 +38,11 @@ pub fn mark_glides(input: &str) -> Result<String, Jvofli> {
                     unreachable!("[mark_glides] only {{i/u}} should get here but this is a {{{c}}}")
                 }
             };
-            if i != chars.len() - 1 && "aeiouy".contains(chars[i + 1]) {
+            if i != chars.len() - 1 && matches!(chars[i + 1], 'a' | 'e' | 'i' | 'o' | 'u' | 'y') {
                 chars[i] = on;
             } else if i != 0
                 && let before = chars[i - 1]
-                && "aeoy".contains(before)
+                && matches!(before, 'a' | 'e' | 'o' | 'y')
             {
                 if is_diphthong(&format!("{before}{c}")) {
                     chars[i] = off;
@@ -205,7 +194,7 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
         // in case someone wrote a misplaced ĭ/ŭ
         // (`mark_glides` shouldn't cause this)
         if let Some(&last) = chars.last()
-            && "ĭŭ".contains(last)
+            && matches!(last, 'ĭ' | 'ŭ')
             && (chars.len() < 2 || !is_vowel(chars[chars.len() - 2]))
         {
             flip!(Jboraku, "{{{last}}} must come after a vowel");

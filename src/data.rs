@@ -64,6 +64,17 @@ pub const fn is_hard_consonant(c: char) -> bool {
     )
 }
 
+/// Returns `true` if `s` is a permissible syllable onset.
+pub fn is_hard_onset(s: &str) -> bool {
+    match s.len() {
+        0 => true,
+        1 => s.chars().next().is_some_and(is_hard_consonant),
+        2 => is_initial(s),
+        3 => is_initial(&s[..2]) && is_zihevla_initial(&s[1..]),
+        _ => false,
+    }
+}
+
 /// Returns `true` if `c` is an annotated onglide: *q* or *w*.
 #[inline]
 pub const fn is_onglide(c: char) -> bool { matches!(c, 'q' | 'w') }
@@ -84,6 +95,7 @@ pub const fn is_vowel(c: char) -> bool { matches!(c, 'a' | 'e' | 'i' | 'o' | 'u'
 #[inline]
 pub fn is_diphthong(s: &str) -> bool { matches!(s, "ai" | "ei" | "oi" | "au") }
 
+/*
 /// Returns `true` if `s` is a single vowel (other than *y*) or a diphthong. As
 /// standalone syllables, these always require a glottal stop before them.
 #[inline]
@@ -97,16 +109,14 @@ pub fn is_start_vowel_cluster(s: &str) -> bool {
 /// Returns `true` if `s` is a syllable nucleus starting with a glide.
 #[inline]
 #[rustfmt::skip]
-pub fn is_follow_vowel_cluster(_s: &str) -> bool {
-    todo!("should these have q/w instead of i/u?");
-    /*
+pub fn is_follow_vowel_cluster(s: &str) -> bool {
     matches!(
         s,
         "ia" | "ie" | "ii" | "io" | "iu" | "iau" | "iai" | "iei" | "ioi" | "ua" | "ue" | "ui"
         | "uo" | "uu" | "uau" | "uai" | "uei" | "uoi"
     )
-    */
 }
+*/
 
 /// Returns `true` if `s` is a lujvo hyphen, used to prevent cmavo-shaped rafsi
 /// from falling off the start of a lujvo and to delimit zi'evla inside a lujvo.

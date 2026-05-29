@@ -4,8 +4,9 @@ use std::time::{Duration, Instant};
 
 use latkerlo_jvotci::prewords::syllabify;
 
-fn avg(i: &str, r: u32) -> Duration {
+fn avg(i: &str) -> Duration {
     let mut total = Duration::ZERO;
+    let r = 3;
     for _ in 0..r {
         let start = Instant::now();
         let _ = syllabify(i);
@@ -20,7 +21,7 @@ fn find(p: &str, n: &str) {
     let mut high = 1_usize;
     loop {
         let input = p.repeat(high);
-        let avg = avg(&input, 3);
+        let avg = avg(&input);
         println!("[exp] n {high:7}, len {:8}, avg {:8.3?}ms", input.len(), avg.as_millis_f32());
         if avg > TARGET {
             break;
@@ -31,7 +32,7 @@ fn find(p: &str, n: &str) {
     while low + 1 < high {
         let mid = low.midpoint(high);
         let input = p.repeat(mid);
-        let avg = avg(&input, 3);
+        let avg = avg(&input);
         println!("[bin] n {mid:7}, len {:8}, avg {:8.3?}ms", input.len(), avg.as_millis_f32());
         if avg > TARGET {
             high = mid;
@@ -46,8 +47,10 @@ fn main() {
     easy       7.22 MB/s
     hard       4.01 MB/s
     less hard  6.67 MB/s
+    catgirl    7.54 MB/s
      */
     find("ua", "easy mode");
     find("xazdmru", "hard mode");
     find("xazblblblblblblblblblblna", "less hard mode");
+    find("uu", "catgirl mode");
 }
