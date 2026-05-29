@@ -1,12 +1,12 @@
 use itertools::Itertools as _;
 
 use crate::{
-    data::{
+    fli, flip,
+    jvofli::{Jvofli, Jvoflikle::Jboraku},
+    phonology::{
         is_diphthong, is_hard_consonant, is_hard_onset, is_offglide, is_onglide, is_sonorant,
         is_valid, is_vowel,
     },
-    fli, flip,
-    jvofli::{Jvofli, Jvoflikle::Jboraku},
 };
 
 /// Checks if `s` only contains Lojban letters and returns `Ok(())` if so.
@@ -15,7 +15,7 @@ use crate::{
 /// Returns a [`Jboraku`] if it doesn't.
 pub fn check_lojban_only(s: &str) -> Result<(), Jvofli> {
     if let Some(bad) = s.chars().find(|&c| {
-        !(is_vowel(c) || is_hard_consonant(c) || is_onglide(c) || is_offglide(c) || c == '\'')
+        !(is_hard_consonant(c) || is_vowel(c) || is_onglide(c) || is_offglide(c) || c == '\'')
     }) {
         flip!(Jboraku, "{{{s}}} contains non-lojban characters such as {{{bad}}}")
     }
@@ -67,8 +67,8 @@ fn parse_previous_coda(chars: &[char]) -> Result<(Option<char>, Vec<String>), Jv
     if chars.is_empty() {
         return Ok((None, vec![]));
     }
-    if is_hard_consonant(chars[0])
-        && (chars.len() - 1).is_multiple_of(2)
+    if (chars.len() - 1).is_multiple_of(2)
+        && is_hard_consonant(chars[0])
         && let Ok(syllables) = as_consonantal_syllables(&chars[1..])
     {
         return Ok((Some(chars[0]), syllables));
@@ -160,7 +160,7 @@ fn split_after_nuclei(s: &str) -> Vec<&str> {
     let mut chars = s.char_indices().peekable();
     while let Some((_, c)) = chars.next() {
         let next = chars.peek().map(|&(_, c)| c);
-        if is_offglide(c) || (is_vowel(c) && !next.is_some_and(is_offglide)) {
+        if is_vowel(c) && !next.is_some_and(is_offglide) || is_offglide(c) {
             let end = chars.peek().map_or(s.len(), |&(i, _)| i);
             pieces.push(&s[start..end]);
             start = end;
@@ -247,8 +247,7 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
                         let (coda, consonantal_syllables) =
                             parse_previous_coda(prefix).map_err(|e| last_err = Some(e)).ok()?;
                         if consonantal_syllables.is_empty()
-                            && let Some(coda) = coda
-                            && let Some(c) = hard_onset.chars().next()
+                            && let (Some(coda), Some(c)) = (coda, hard_onset.chars().next())
                             && !is_valid(&format!("{coda}{c}"))
                         {
                             last_err = Some(fli!(Jboraku, "{{{coda}{c}}} is an invalid cluster"));
