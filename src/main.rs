@@ -21,7 +21,7 @@ fn find(p: &str, n: &str) {
     loop {
         let input = p.repeat(high);
         let avg = avg(&input, 3);
-        println!("[exp] n {high:7}, len {:7}, avg {:8.3?}ms", input.len(), avg.as_millis_f32());
+        println!("[exp] n {high:7}, len {:8}, avg {:8.3?}ms", input.len(), avg.as_millis_f32());
         if avg > TARGET {
             break;
         }
@@ -32,7 +32,7 @@ fn find(p: &str, n: &str) {
         let mid = low.midpoint(high);
         let input = p.repeat(mid);
         let avg = avg(&input, 3);
-        println!("[bin] n {mid:7}, len {:7}, avg {:8.3?}ms", input.len(), avg.as_millis_f32());
+        println!("[bin] n {mid:7}, len {:8}, avg {:8.3?}ms", input.len(), avg.as_millis_f32());
         if avg > TARGET {
             high = mid;
         } else {
@@ -43,9 +43,9 @@ fn find(p: &str, n: &str) {
 
 fn main() {
     /*
-    easy       7.21 MB/s
-    hard       3.79 MB/s
-    less hard  6.42 MB/s
+    easy       7.22 MB/s
+    hard       4.01 MB/s
+    less hard  6.67 MB/s
      */
     find("ua", "easy mode");
     find("xazdmru", "hard mode");

@@ -3,20 +3,20 @@
 use phf::phf_set;
 
 /// The consonant clusters permitted by CLL.
-pub static VALID: phf::Set<&'static str> = phf_set! {
-    "bd", "bg", "bj", "bl", "bm", "bn", "br", "bv", "bz", "cf", "ck", "cl", "cm", "cn", "cp",
-    "cr", "ct", "db", "dg", "dj", "dl", "dm", "dn", "dr", "dv", "dz", "fc", "fk", "fl", "fm",
-    "fn", "fp", "fr", "fs", "ft", "fx", "gb", "gd", "gj", "gl", "gm", "gn", "gr", "gv", "gz",
-    "jb", "jd", "jg", "jl", "jm", "jn", "jr", "jv", "kc", "kf", "kl", "km", "kn", "kp", "kr",
-    "ks", "kt", "lb", "lc", "ld", "lf", "lg", "lj", "lk", "lm", "ln", "lp", "lr", "ls", "lt",
-    "lv", "lx", "lz", "mb", "mc", "md", "mf", "mg", "mj", "mk", "ml", "mn", "mp", "mr", "ms",
-    "mt", "mv", "mx", "nb", "nc", "nd", "nf", "ng", "nj", "nk", "nl", "nm", "np", "nr", "ns",
-    "nt", "nv", "nx", "nz", "pc", "pf", "pk", "pl", "pm", "pn", "pr", "ps", "pt", "px", "rb",
-    "rc", "rd", "rf", "rg", "rj", "rk", "rl", "rm", "rn", "rp", "rs", "rt", "rv", "rx", "rz",
-    "sf", "sk", "sl", "sm", "sn", "sp", "sr", "st", "sx", "tc", "tf", "tk", "tl", "tm", "tn",
-    "tp", "tr", "ts", "tx", "vb", "vd", "vg", "vj", "vl", "vm", "vn", "vr", "vz", "xf", "xl",
-    "xm", "xn", "xp", "xr", "xs", "xt", "zb", "zd", "zg", "zl", "zm", "zn", "zr", "zv"
-};
+pub static VALID: phf::Set<&'static str> = phf_set![
+    "bd", "bg", "bj", "bl", "bm", "bn", "br", "bv", "bz", "cf", "ck", "cl", "cm", "cn", "cp", "cr",
+    "ct", "db", "dg", "dj", "dl", "dm", "dn", "dr", "dv", "dz", "fc", "fk", "fl", "fm", "fn", "fp",
+    "fr", "fs", "ft", "fx", "gb", "gd", "gj", "gl", "gm", "gn", "gr", "gv", "gz", "jb", "jd", "jg",
+    "jl", "jm", "jn", "jr", "jv", "kc", "kf", "kl", "km", "kn", "kp", "kr", "ks", "kt", "lb", "lc",
+    "ld", "lf", "lg", "lj", "lk", "lm", "ln", "lp", "lr", "ls", "lt", "lv", "lx", "lz", "mb", "mc",
+    "md", "mf", "mg", "mj", "mk", "ml", "mn", "mp", "mr", "ms", "mt", "mv", "mx", "nb", "nc", "nd",
+    "nf", "ng", "nj", "nk", "nl", "nm", "np", "nr", "ns", "nt", "nv", "nx", "nz", "pc", "pf", "pk",
+    "pl", "pm", "pn", "pr", "ps", "pt", "px", "rb", "rc", "rd", "rf", "rg", "rj", "rk", "rl", "rm",
+    "rn", "rp", "rs", "rt", "rv", "rx", "rz", "sf", "sk", "sl", "sm", "sn", "sp", "sr", "st", "sx",
+    "tc", "tf", "tk", "tl", "tm", "tn", "tp", "tr", "ts", "tx", "vb", "vd", "vg", "vj", "vl", "vm",
+    "vn", "vr", "vz", "xf", "xl", "xm", "xn", "xp", "xr", "xs", "xt", "zb", "zd", "zg", "zl", "zm",
+    "zn", "zr", "zv"
+];
 
 /// Returns `true` if `s` is in [`VALID`].
 #[inline]
@@ -27,12 +27,11 @@ pub fn is_valid(s: &str) -> bool { VALID.contains(s) }
 pub fn is_mz_valid(s: &str) -> bool { s == "mz" || is_valid(s) }
 
 /// The consonant clusters permitted word-initially by CLL.
-pub static INITIAL: phf::Set<&'static str> = phf_set! {
-    "bl", "br", "cf", "ck", "cl", "cm", "cn", "cp", "cr", "ct", "dj", "dr", "dz", "fl", "fr",
-    "gl", "gr", "jb", "jd", "jg", "jm", "jv", "kl", "kr", "ml", "mr", "pl", "pr", "sf", "sk",
-    "sl", "sm", "sn", "sp", "sr", "st", "tc", "tr", "ts", "vl", "vr", "xl", "xr", "zb", "zd",
-    "zg", "zm", "zv"
-};
+pub static INITIAL: phf::Set<&'static str> = phf_set![
+    "bl", "br", "cf", "ck", "cl", "cm", "cn", "cp", "cr", "ct", "dj", "dr", "dz", "fl", "fr", "gl",
+    "gr", "jb", "jd", "jg", "jm", "jv", "kl", "kr", "ml", "mr", "pl", "pr", "sf", "sk", "sl", "sm",
+    "sn", "sp", "sr", "st", "tc", "tr", "ts", "vl", "vr", "xl", "xr", "zb", "zd", "zg", "zm", "zv"
+];
 
 /// Returns `true` if `s` is in [`INITIAL`].
 #[inline]
