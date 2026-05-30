@@ -126,13 +126,8 @@ pub fn is_start_vowel_cluster(s: &str) -> bool {
 
 /// Returns `true` if `s` is a syllable nucleus starting with a glide.
 #[inline]
-#[rustfmt::skip]
 pub fn is_follow_vowel_cluster(s: &str) -> bool {
-    matches!(
-        s,
-        "ia" | "ie" | "ii" | "io" | "iu" | "iau" | "iai" | "iei" | "ioi" | "ua" | "ue" | "ui"
-        | "uo" | "uu" | "uau" | "uai" | "uei" | "uoi"
-    )
+    matches!(s.chars().next(), Some('i' | 'u')) && is_start_vowel_cluster(&s[1..])
 }
 */
 
