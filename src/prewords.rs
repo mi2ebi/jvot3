@@ -4,8 +4,8 @@ use crate::{
     fli, flip,
     jvofli::{Jvofli, Jvoflikle::Jboraku},
     phonology::{
-        is_diphthong, is_hard_consonant, is_hard_onset, is_offglide, is_onglide, is_sonorant,
-        is_valid, is_vowel,
+        is_banned_triple, is_diphthong, is_hard_consonant, is_hard_onset, is_offglide, is_onglide,
+        is_sonorant, is_valid, is_vowel,
     },
 };
 
@@ -235,7 +235,7 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
             // try treating each suffix of the onset (longest first) as a hard onset, assuming the
             // rest is the previous syllable's coda, and take the first split that works
             _ => {
-                let mut last_err = None;
+                let mut best_err = None;
                 let Some((suffix_len, hard_onset)) =
                     (1..=onset_chars.len().min(3)).rev().find_map(|suffix_len| {
                         let hard_onset: String =
@@ -244,20 +244,38 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
                             return None;
                         }
                         let prefix = &onset_chars[..onset_chars.len() - suffix_len];
-                        let (coda, consonantal_syllables) =
-                            parse_previous_coda(prefix).map_err(|e| last_err = Some(e)).ok()?;
+                        let (coda, consonantal_syllables) = match parse_previous_coda(prefix) {
+                            Ok(x) => x,
+                            Err(e) => {
+                                best_err.get_or_insert(e);
+                                return None;
+                            }
+                        };
                         if consonantal_syllables.is_empty()
                             && let (Some(coda), Some(c)) = (coda, hard_onset.chars().next())
                             && !is_valid(&format!("{coda}{c}"))
                         {
-                            last_err = Some(fli!(Jboraku, "{{{coda}{c}}} is an invalid cluster"));
+                            best_err = Some(fli!(Jboraku, "{{{coda}{c}}} is an invalid cluster"));
                             return None;
+                        }
+                        if let Some(coda) = coda
+                            && hard_onset.len() >= 2
+                        {
+                            let mut chars = hard_onset.chars();
+                            let oob = || unreachable!("[syllabify] `hard_onset` has a length < 2");
+                            let first = chars.next().unwrap_or_else(oob);
+                            let second = chars.next().unwrap_or_else(oob);
+                            let triple = format!("{coda}{first}{second}");
+                            if is_banned_triple(&triple) {
+                                best_err = Some(fli!(Jboraku, "{{{triple}}} is a banned triple"));
+                                return None;
+                            }
                         }
                         Some((suffix_len, hard_onset))
                     })
                 else {
-                    return Err(last_err.unwrap_or_else(|| {
-                        unreachable!("[syllabify] `last_err` should be `Some` by now")
+                    return Err(best_err.unwrap_or_else(|| {
+                        unreachable!("[syllabify] `best_err` should be `Some` by now")
                     }));
                 };
                 let prefix = &onset_chars[..onset_chars.len() - suffix_len];
@@ -394,5 +412,9 @@ mod tests {
     #[test]
     fn t_syllabify_apcnli_ok() {
         ok!(syllabify; "apcnli" => "ap", "cn", "li");
+    }
+    #[test]
+    fn t_syllabify_nondza_err() {
+        err!(syllabify; "nondza");
     }
 }

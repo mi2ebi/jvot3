@@ -6,13 +6,14 @@ use latkerlo_jvotci::prewords::syllabify;
 fn bench_syllabify(c: &mut Criterion) {
     let mut group = c.benchmark_group("syllabify");
     let len = 1000;
+    let zgifnzeha = "zgikemfi'inalka'esefsysajyke'ejvekemsefsyda'atoiflike'ejvejagborkemjilryjvesefsyborxenze'a";
     group.bench_function("easy_1", |b| b.iter(|| syllabify(black_box("ua"))));
     group.bench_function("hard_1", |b| b.iter(|| syllabify(black_box("xazdmru"))));
     group.bench_function("less_hard_1", |b| {
         b.iter(|| syllabify(black_box("xazblblblblblblblblblblna")))
     });
     group.bench_function("catgirl_1", |b| b.iter(|| syllabify(black_box("uu"))));
-    group.bench_function("zgifnzeha_1", |b| b.iter(|| syllabify(black_box("zgikemfi'inalka'esefsysajyke'ejvekemsefsyda'atoiflike'ejvejagborkemjilryjvesefsyborxenze'a"))));
+    group.bench_function("zgifnzeha_1", |b| b.iter(|| syllabify(black_box(zgifnzeha))));
     group.bench_function("easy_1000ch", |b| b.iter(|| syllabify(black_box(&"ua".repeat(len / 2)))));
     group.bench_function("hard_1000ch", |b| {
         b.iter(|| syllabify(black_box(&"xazdmru".repeat(len / 7))))
@@ -24,7 +25,7 @@ fn bench_syllabify(c: &mut Criterion) {
         b.iter(|| syllabify(black_box(&"uu".repeat(len / 2))))
     });
     group.bench_function("zgifnzeha_1000ch", |b| {
-        b.iter(|| syllabify(black_box(&"zgikemfi'inalka'esefsysajyke'ejvekemsefsyda'atoiflike'ejvejagborkemjilryjvesefsyborxenze'a".repeat(len / 90))))
+        b.iter(|| syllabify(black_box(&zgifnzeha.repeat(len / 90))))
     });
     group.finish();
 }
