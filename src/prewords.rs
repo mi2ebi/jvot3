@@ -4,9 +4,10 @@ use crate::{
     fli, flip,
     jvofli::{Jvofli, Jvoflikle::Jboraku},
     phonology::{
-        is_banned_triple, is_diphthong, is_hard_consonant, is_hard_onset, is_offglide, is_onglide,
-        is_sonorant, is_valid, is_vowel,
+        is_banned_triple, is_diphthong, is_hard_consonant, is_hard_onset, is_initial, is_offglide,
+        is_onglide, is_sonorant, is_valid, is_vowel,
     },
+    test_bytes,
 };
 
 /// Checks if `s` only contains Lojban letters and returns `Ok(())` if so.
@@ -44,7 +45,7 @@ pub fn mark_glides(input: &str) -> Result<String, Jvofli> {
                 && let before = chars[i - 1]
                 && matches!(before, 'a' | 'e' | 'o' | 'y')
             {
-                if is_diphthong(&format!("{before}{c}")) {
+                if test_bytes!(is_diphthong(before, c)) {
                     chars[i] = off;
                     if chars.get(i + 1).is_some_and(|&c| c == on) {
                         flip!(Jboraku, "{{{off}{on}}} is invalid");
@@ -118,6 +119,7 @@ fn as_consonantal_syllables(chars: &[char]) -> Result<Vec<String>, Jvofli> {
 /// # Errors
 /// Returns a [`Jboraku`] if the cluster at the syllable boundary is invalid, or
 /// if there is no previous syllable for a coda to attach to.
+#[allow(clippy::too_many_lines)]
 fn apply_coda(
     real: &mut Vec<String>,
     chars: &[char],
@@ -135,7 +137,7 @@ fn apply_coda(
         // or if there aren't any, the first char of the onset we're about to push
         let next = consonant_syllables.first().and_then(|s| s.chars().next()).or(next_consonant);
         if let Some(c) = next
-            && !is_valid(&format!("{coda}{c}"))
+            && !test_bytes!(is_valid(coda, c))
         {
             // flip!(Jboraku, "{{{coda}{c}}} is an invalid cluster");
             unreachable!(
@@ -176,6 +178,7 @@ fn split_after_nuclei(s: &str) -> Vec<&str> {
 ///
 /// # Errors
 /// Returns a [`Jboraku`] if the input can't be split into valid syllables.
+#[allow(clippy::too_many_lines)]
 pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
     check_lojban_only(input)?;
     let annotated = mark_glides(input)?;
@@ -215,17 +218,24 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
                 if i == 0 {
                     flip!(Jboraku, "{{'}} can't appear word-initially");
                 }
-                real.push(format!("'{nucleus}"));
+                let mut s = String::with_capacity(1 + nucleus.len());
+                s.push('\'');
+                s.push_str(&nucleus);
+                real.push(s);
             }
             // `mark_glides` validates these
-            [c] if is_onglide(*c) => {
-                real.push(format!("{c}{nucleus}"));
+            &[c] if is_onglide(c) => {
+                let mut s = String::with_capacity(c.len_utf8() + nucleus.len());
+                s.push(c);
+                s.push_str(&nucleus);
+                real.push(s);
             }
             // unambiguous hard onset
-            o if let o = o.iter().collect::<String>()
+            o if let mut o = o.iter().collect::<String>()
                 && is_hard_onset(&o) =>
             {
-                real.push(format!("{o}{nucleus}"));
+                o.push_str(&nucleus);
+                real.push(o);
             }
             // evil q/w/'
             o if let Some(c) = o.iter().find(|&&c| is_onglide(c) || c == '\'') => {
@@ -253,7 +263,7 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
                         };
                         if consonantal_syllables.is_empty()
                             && let (Some(coda), Some(c)) = (coda, hard_onset.chars().next())
-                            && !is_valid(&format!("{coda}{c}"))
+                            && !test_bytes!(is_valid(coda, c))
                         {
                             best_err = Some(fli!(Jboraku, "{{{coda}{c}}} is an invalid cluster"));
                             return None;
@@ -265,9 +275,11 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
                             let oob = || unreachable!("[syllabify] `hard_onset` has a length < 2");
                             let first = chars.next().unwrap_or_else(oob);
                             let second = chars.next().unwrap_or_else(oob);
-                            let triple = format!("{coda}{first}{second}");
-                            if is_banned_triple(&triple) {
-                                best_err = Some(fli!(Jboraku, "{{{triple}}} is a banned triple"));
+                            if test_bytes!(is_banned_triple(coda, first, second)) {
+                                best_err = Some(fli!(
+                                    Jboraku,
+                                    "{{{coda}{first}{second}}} is a banned triple"
+                                ));
                                 return None;
                             }
                         }
@@ -280,7 +292,9 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
                 };
                 let prefix = &onset_chars[..onset_chars.len() - suffix_len];
                 apply_coda(&mut real, prefix, hard_onset.chars().next())?;
-                real.push(format!("{hard_onset}{nucleus}"));
+                let mut hard_onset = hard_onset;
+                hard_onset.push_str(&nucleus);
+                real.push(hard_onset);
             }
         }
     }
@@ -302,6 +316,17 @@ pub fn jborakufy(syllables: &[String]) -> Vec<String> {
         }
     }
     result
+}
+
+#[allow(clippy::many_single_char_names)]
+pub const fn is_gismu(s: &str) -> bool {
+    let &[a, b, c, d, e] = s.as_bytes() else { return false };
+    let [ab, cd] = [[a, b], [c, d]];
+    let [Ok(ab), Ok(cd)] = [str::from_utf8(&ab), str::from_utf8(&cd)] else { return false };
+    is_hard_consonant(a as char)
+        && is_hard_consonant(d as char)
+        && is_vowel(e as char)
+        && (is_vowel(b as char) && is_valid(cd) || is_vowel(c as char) && is_initial(ab))
 }
 
 /// Returns `true` if `s` is some cmavo (jboraku each with at most 1 hard
@@ -392,6 +417,10 @@ mod tests {
     #[test]
     fn t_syllabify_aplbra_ok() {
         ok!(syllabify; "aplbra" => "a", "pl", "bra");
+    }
+    #[test]
+    fn t_syllabify_aplua_err() {
+        err!(syllabify; "aplua");
     }
     #[test]
     fn t_syllabify_an_ok() {

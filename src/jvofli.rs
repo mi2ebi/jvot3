@@ -19,12 +19,12 @@ pub struct Jvofli {
 /// Constructs a `Jvofli`.
 #[macro_export]
 macro_rules! fli {
-    ($k: expr, $($f: expr),*) => { Jvofli::new($k, format!($($f),*)) };
+    ($k:expr, $($f:expr),+) => { Jvofli::new($k, format!($($f),+)) };
 }
 /// Constructs and returns a `Jvofli`.
 #[macro_export]
 macro_rules! flip {
-    ($k: expr, $($f: expr),*) => { return Err(fli!($k, $($f),*)) };
+    ($k:expr, $($f:expr),+) => { return Err(fli!($k, $($f),+)) };
 }
 
 impl Jvofli {
