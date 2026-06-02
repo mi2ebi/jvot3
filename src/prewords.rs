@@ -105,7 +105,7 @@ fn as_consonantal_syllables(chars: &[char]) -> Result<Vec<String>, Jvofli> {
         let &[first, second] = chunk else {
             unreachable!("[as_consonantal_syllables] chunks must be length 2");
         };
-        if is_hard_consonant(first) && is_sonorant(second) {
+        if is_hard_consonant(first) && is_sonorant(second) && first != second {
             syllables.push(chunk.iter().collect());
         } else {
             flip!(Jboraku, "{{{}}} is not a consonantal syllable", String::from_iter(chunk));
@@ -445,5 +445,9 @@ mod tests {
     #[test]
     fn t_syllabify_nondza_err() {
         err!(syllabify; "nondza");
+    }
+    #[test]
+    fn t_syllabify_djarrspageti_err() {
+        err!(syllabify; "djarrspageti");
     }
 }
