@@ -1,12 +1,13 @@
 use itertools::Itertools as _;
 
 use crate::{
-    fli, flip,
+    fli,
+    flip,
     jvofli::{Jvofli, Jvoflikle::Jboraku},
     phonology::{
         is_banned_triple, is_diphthong, is_hard_consonant, is_hard_onset, is_initial, is_offglide,
         is_onglide, is_sonorant, is_valid, is_vowel,
-    },
+    }, // all of these are const
     test_bytes,
 };
 
@@ -105,6 +106,7 @@ fn as_consonantal_syllables(chars: &[char]) -> Result<Vec<String>, Jvofli> {
         let &[first, second] = chunk else {
             unreachable!("[as_consonantal_syllables] chunks must be length 2");
         };
+        #[expect(clippy::suspicious_operation_groupings)]
         if is_hard_consonant(first) && is_sonorant(second) && first != second {
             syllables.push(chunk.iter().collect());
         } else {
@@ -119,7 +121,6 @@ fn as_consonantal_syllables(chars: &[char]) -> Result<Vec<String>, Jvofli> {
 /// # Errors
 /// Returns a [`Jboraku`] if the cluster at the syllable boundary is invalid, or
 /// if there is no previous syllable for a coda to attach to.
-#[allow(clippy::too_many_lines)]
 fn apply_coda(
     real: &mut Vec<String>,
     chars: &[char],
@@ -145,7 +146,14 @@ fn apply_coda(
             );
         }
         let Some(prev) = real.last_mut() else {
-            flip!(Jboraku, "{{{coda}}} is a word-initial coda");
+            let next = next.unwrap_or_else(|| {
+                unreachable!(
+                    "[apply_coda] `next` and `real.last_mut()` can't both be `None`: \
+                     word-final codas always have a previous syllable, and if not it should be caught by \
+                     'has no vowels'"
+                )
+            });
+            flip!(Jboraku, "{{{coda}{next}}} is an invalid word-initial cluster");
         };
         prev.push(coda);
     }
@@ -266,6 +274,13 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
                             && !test_bytes!(is_valid(coda, c))
                         {
                             best_err = Some(fli!(Jboraku, "{{{coda}{c}}} is an invalid cluster"));
+                            return None;
+                        }
+                        if !consonantal_syllables.is_empty()
+                            && let (Some(&r), Some(c)) = (prefix.last(), hard_onset.chars().next())
+                            && !test_bytes!(is_valid(r, c))
+                        {
+                            best_err = Some(fli!(Jboraku, "{{{r}{c}}} is an invalid cluster"));
                             return None;
                         }
                         if let Some(coda) = coda
@@ -449,5 +464,9 @@ mod tests {
     #[test]
     fn t_syllabify_djarrspageti_err() {
         err!(syllabify; "djarrspageti");
+    }
+    #[test]
+    fn t_syllabify_ivllava_err() {
+        err!(syllabify; "ivllava");
     }
 }
