@@ -54,7 +54,7 @@ pub const INITIAL_TABLE: [u32; 25] = [
     0,
     0b0_0000_0001_0000_0100_0000_0000, // fl fr
     0b0_0000_0001_0000_0100_0000_0000, // gl gr
-    0b0_0000_0000_0000_0000_0000_0000, // h
+    0,
     0,
     0b0_0001_0000_0000_1000_0010_0101, // jb jd jg jm jv
     0b0_0000_0001_0000_0100_0000_0000, // kl kr
@@ -85,15 +85,6 @@ pub const fn is_initial(s: &str) -> bool {
         return false;
     }
     (INITIAL_TABLE[xi] >> yi) & 1 != 0
-}
-
-#[inline]
-pub const fn is_zihevla_initial(s: &str) -> bool {
-    matches!(
-        s.as_bytes(),
-        [b'b' | b'f' | b'g' | b'k' | b'm' | b'p' | b'v', b'l']
-            | [b'b' | b'd' | b'f' | b'g' | b'k' | b'm' | b'p' | b't' | b'v', b'r']
-    )
 }
 
 /// Returns `true` if `s` is one of the consonant triples banned by CLL: *ndj
@@ -129,7 +120,12 @@ pub const fn is_hard_onset(s: &str) -> bool {
         [] => true,
         &[x] => is_hard_consonant(x as char),
         &[_, _] => is_initial(s),
-        &[x, y, z] => test_bytes!(is_initial(x, y)) && test_bytes!(is_zihevla_initial(y, z)),
+        &[x, y, z] => {
+            matches!(x, b'c' | b'j' | b's' | b'z')
+                && test_bytes!(is_initial(x, y))
+                && test_bytes!(is_initial(y, z))
+                && matches!(z, b'l' | b'r')
+        }
         _ => false,
     }
 }

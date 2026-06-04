@@ -61,11 +61,9 @@ A permissible syllable-initial consonant cluster. Valid hard onsets are
 - *denpa bu*
 - a single hard consonant
 - a valid initial pair
-- three consonants where the first two are a valid initial and the last two are a valid zi'evla initial
+- three consonants C₁C₂C₃ where C₁C₂ and C₂C₃ are valid initials, C₁ is a sibilant (*s z c j*), and C₃ is *l* or *r*.
 
-Valid initial and medial pairs are defined by CLL and present in `phonology.rs`. Valid zi'evla initials are *bl fl gl
-kl ml pl vl br dr fr gr kr mr pr tr vr*, as determined by existing Lojban parser tradition; CLL allows zi'evla like
-*?stcibilo* which everyone finds a bit silly.
+Valid initial and medial pairs are defined by CLL and present in `phonology.rs`.
 
 ### Consonantal syllable
 
@@ -87,7 +85,7 @@ extends it to also cover zi'evla and short forms of them. We use **CLL rafsi** t
 
 **Zi'evla [also -*zve*-]**: A freeword, just defined as any brivla that isn't a gismu or lujvo.
 
-**Cmevla**: A name word, anything that ends in a consonant and is therefore mandatorily surround by *denpa bu*.
+**Cmevla**: A name word, anything that ends in a consonant and is therefore mandatorily surrounded by *denpa bu*.
 
 **Cmavo**: A particle, anything that isn't a brivla or a cmevla.
 
