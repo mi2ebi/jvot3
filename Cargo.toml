@@ -1,10 +1,10 @@
 [package]
-name = "latkerlo-jvotci"
+name = "jvot3"
 version = "3.0.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 description = "Tools for creating and decomposing Lojban lujvo."
-repository = "https://github.com/latkerlo/latkerlo-jvotci"
+repository = "https://github.com/mi2ebi/jvot3"
 keywords = ["lojban", "lujvo", "linguistics", "cli"]
 categories = ["text-processing", "parser-implementations", "command-line-utilities"]
 rust-version = "1.95.0"
