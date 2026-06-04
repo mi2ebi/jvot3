@@ -57,7 +57,7 @@ Any vowel except *y* (which can't be stressed): *aeiou*.
 
 A permissible syllable-initial consonant cluster. Valid hard onsets are
 
-- the empty onset
+- *denpa bu*
 - a single hard consonant
 - a valid initial pair
 - three consonants where the first two are a valid initial and the last two are a valid zi'evla initial
