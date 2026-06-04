@@ -1,7 +1,7 @@
 use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use latkerlo_jvotci::prewords::syllabify;
+use jvot3::prewords::syllabify;
 
 fn bench_syllabify(c: &mut Criterion) {
     let mut group = c.benchmark_group("syllabify");

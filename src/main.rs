@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use latkerlo_jvotci::prewords::syllabify;
+use jvot3::prewords::syllabify;
 
 fn avg(i: &str) -> Duration {
     let mut total = Duration::ZERO;
