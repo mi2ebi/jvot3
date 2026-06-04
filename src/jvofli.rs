@@ -7,7 +7,7 @@ use std::{
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Jvoflikle {
     /// There was some sort of problem turning a thing into syllables.
-    Jboraku,
+    SyllableError,
 }
 
 /// An error.

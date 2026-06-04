@@ -1,16 +1,17 @@
 # jvot3 jargon
 
-These are not necessarily defined 'in order'; you might have to do some jumping around.
+These are not necessarily defined 'in order'; you might have to do some jumping around. Words specific to jvot3 have 
+a boat emoji ⛵
 
 ## Spelling forms
 
-### Standard spelling
+### Standard spelling ⛵
 
 Ordinary written Lojban: the only letters are *abcdefg'ijklmnoprstuvxyz* -- note that this
 excludes *denpa bu* (period) because it's equivalent to writing a space, and *slaka bu* (comma) because it allows for
 illegal syllable sequences like *\*au,e,n*.
 
-### Annotated spelling
+### Annotated spelling ⛵
 
 Standard spelling has a problem: *i* and *u* are overloaded. Depending on position, they can be
 
@@ -34,7 +35,7 @@ Annotation is done by `prewords::mark_glides`.
 
 **Diphthong (F)**: One of *ai ei oi au*.
 
-### Hard consonant (C)
+### Hard consonant (C) ⛵
 
 Any consonant except *.y'y.* /h/ and *denpa bu* /ʔ/ and onglides, concretely: *bcdfgjklmnprstvxz*. This distinction
 is made because there are more limits on what non-hard consonants can be next to. Hard consonants are all the ones
@@ -53,7 +54,7 @@ that participate in clusters.
 
 Any vowel except *y* (which can't be stressed): *aeiou*.
 
-### Hard onset
+### Hard onset ⛵
 
 A permissible syllable-initial consonant cluster. Valid hard onsets are
 
@@ -90,7 +91,7 @@ extends it to also cover zi'evla and short forms of them. We use **CLL rafsi** t
 
 **Cmavo**: A particle, anything that isn't a brivla or a cmevla.
 
-### Unit
+### Unit ⛵
 
 If you take a Lojban sentence and remove as many spaces as you can (counting *denpa bu* as mandatory spaces) without
 needing to indicate stress...
@@ -99,12 +100,7 @@ needing to indicate stress...
 
 the resulting things-that-look-like-words are units. This is basically "split after every brivla".
 
-### Jboraku
-
-A syllable whose onset isn't *.y'y.*, plus any immediately following syllables whose onset is *.y'y.*. This is
-the shape a cmavo is.
-
-### Pre-brivla
+### Pre-brivla ⛵
 
 The optional part of a unit that's the brivla, after any (zero or more) cmavo at the start. Once a pre-brivla is
 isolated, it's one of

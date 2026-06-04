@@ -3,7 +3,7 @@ use itertools::Itertools as _;
 use crate::{
     fli,
     flip,
-    jvofli::{Jvofli, Jvoflikle::Jboraku},
+    jvofli::{Jvofli, Jvoflikle::SyllableError},
     phonology::{
         is_banned_triple, is_diphthong, is_hard_consonant, is_hard_onset, is_initial, is_offglide,
         is_onglide, is_sonorant, is_valid, is_vowel,
@@ -14,12 +14,12 @@ use crate::{
 /// Checks if `s` only contains Lojban letters and returns `Ok(())` if so.
 ///
 /// # Errors
-/// Returns a [`Jboraku`] if it doesn't.
+/// Returns a [`SyllableError`] if it doesn't.
 pub fn check_lojban_only(s: &str) -> Result<(), Jvofli> {
     if let Some(bad) = s.chars().find(|&c| {
         !(is_hard_consonant(c) || is_vowel(c) || is_onglide(c) || is_offglide(c) || c == '\'')
     }) {
-        flip!(Jboraku, "{{{s}}} contains non-lojban characters such as {{{bad}}}")
+        flip!(SyllableError, "{{{s}}} contains non-lojban characters such as {{{bad}}}")
     }
     Ok(())
 }
@@ -27,7 +27,7 @@ pub fn check_lojban_only(s: &str) -> Result<(), Jvofli> {
 /// Respells *i u* when they are onglides (as *q w*) or offglides (as *ĭ ŭ*).
 ///
 /// # Errors
-/// Returns a [`Jboraku`] if any invalid falling diphthongs are used.
+/// Returns a [`SyllableError`] if any invalid falling diphthongs are used.
 pub fn mark_glides(input: &str) -> Result<String, Jvofli> {
     let mut chars = input.chars().collect_vec();
     for i in (0..chars.len()).rev() {
@@ -49,10 +49,10 @@ pub fn mark_glides(input: &str) -> Result<String, Jvofli> {
                 if test_bytes!(is_diphthong(before, c)) {
                     chars[i] = off;
                     if chars.get(i + 1).is_some_and(|&c| c == on) {
-                        flip!(Jboraku, "{{{off}{on}}} is invalid");
+                        flip!(SyllableError, "{{{off}{on}}} is invalid");
                     }
                 } else {
-                    flip!(Jboraku, "{{{before}{c}}} is not a valid diphthong");
+                    flip!(SyllableError, "{{{before}{c}}} is not a valid diphthong");
                 }
             }
         }
@@ -64,7 +64,7 @@ pub fn mark_glides(input: &str) -> Result<String, Jvofli> {
 /// consonantal syllables if possible.
 ///
 /// # Errors
-/// Returns a [`Jboraku`] if the cluster can't be split.
+/// Returns a [`SyllableError`] if the cluster can't be split.
 fn parse_previous_coda(chars: &[char]) -> Result<(Option<char>, Vec<String>), Jvofli> {
     if chars.is_empty() {
         return Ok((None, vec![]));
@@ -81,7 +81,7 @@ fn parse_previous_coda(chars: &[char]) -> Result<(Option<char>, Vec<String>), Jv
         return Ok((None, syllables));
     }
     flip!(
-        Jboraku,
+        SyllableError,
         "{{{}}} can't be parsed as an optional coda followed by some consonantal syllables",
         chars.iter().collect::<String>()
     );
@@ -90,7 +90,7 @@ fn parse_previous_coda(chars: &[char]) -> Result<(Option<char>, Vec<String>), Jv
 /// Nicely packages consonantal syllables.
 ///
 /// # Errors
-/// Returns a [`Jboraku`] if there is anything that isn't a consonant syllable.
+/// Returns a [`SyllableError`] if there is anything that isn't a consonant syllable.
 fn as_consonantal_syllables(chars: &[char]) -> Result<Vec<String>, Jvofli> {
     if chars.is_empty() {
         return Ok(vec![]);
@@ -110,7 +110,7 @@ fn as_consonantal_syllables(chars: &[char]) -> Result<Vec<String>, Jvofli> {
         if is_hard_consonant(first) && is_sonorant(second) && first != second {
             syllables.push(chunk.iter().collect());
         } else {
-            flip!(Jboraku, "{{{}}} is not a consonantal syllable", String::from_iter(chunk));
+            flip!(SyllableError, "{{{}}} is not a consonantal syllable", String::from_iter(chunk));
         }
     }
     Ok(syllables)
@@ -119,7 +119,7 @@ fn as_consonantal_syllables(chars: &[char]) -> Result<Vec<String>, Jvofli> {
 /// Applies a parsed coda to the syllable list.
 ///
 /// # Errors
-/// Returns a [`Jboraku`] if the cluster at the syllable boundary is invalid, or
+/// Returns a [`SyllableError`] if the cluster at the syllable boundary is invalid, or
 /// if there is no previous syllable for a coda to attach to.
 fn apply_coda(
     real: &mut Vec<String>,
@@ -129,7 +129,7 @@ fn apply_coda(
     if next_consonant.is_none()
         && let Some(c) = chars.iter().find(|&&c| is_onglide(c) || c == '\'')
     {
-        flip!(Jboraku, "{{{c}}} can't appear in codas");
+        flip!(SyllableError, "{{{c}}} can't appear in codas");
     }
     let (coda, consonant_syllables) = parse_previous_coda(chars)?;
     if let Some(coda) = coda {
@@ -140,7 +140,7 @@ fn apply_coda(
         if let Some(c) = next
             && !test_bytes!(is_valid(coda, c))
         {
-            // flip!(Jboraku, "{{{coda}{c}}} is an invalid cluster");
+            // flip!(SyllableError, "{{{coda}{c}}} is an invalid cluster");
             unreachable!(
                 "[apply_coda] scary case should have checked validity of {{{coda}{c}}} already"
             );
@@ -153,7 +153,7 @@ fn apply_coda(
                      'has no vowels'"
                 )
             });
-            flip!(Jboraku, "{{{coda}{next}}} is an invalid word-initial cluster");
+            flip!(SyllableError, "{{{coda}{next}}} is an invalid word-initial cluster");
         };
         prev.push(coda);
     }
@@ -185,13 +185,13 @@ fn split_after_nuclei(s: &str) -> Vec<&str> {
 /// Splits a unit in standard spelling into syllables.
 ///
 /// # Errors
-/// Returns a [`Jboraku`] if the input can't be split into valid syllables.
+/// Returns a [`SyllableError`] if the input can't be split into valid syllables.
 #[allow(clippy::too_many_lines)]
 pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
     check_lojban_only(input)?;
     let annotated = mark_glides(input)?;
     if !annotated.chars().any(is_vowel) {
-        flip!(Jboraku, "{{{input}}} has no vowels");
+        flip!(SyllableError, "{{{input}}} has no vowels");
     }
     let fake = split_after_nuclei(&annotated);
     let mut real = vec![];
@@ -208,7 +208,7 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
             && matches!(last, 'ĭ' | 'ŭ')
             && (chars.len() < 2 || !is_vowel(chars[chars.len() - 2]))
         {
-            flip!(Jboraku, "{{{last}}} must come after a vowel");
+            flip!(SyllableError, "{{{last}}} must come after a vowel");
         }
         let nucleus_len = if matches!(chars.last(), Some('ĭ' | 'ŭ')) { 2 } else { 1 };
         let onset_chars = &chars[..chars.len() - nucleus_len];
@@ -217,14 +217,14 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
             // null-onset syllables must be word-initial
             [] => {
                 if i != 0 {
-                    flip!(Jboraku, "{{{piece}}} lacks an onset");
+                    flip!(SyllableError, "{{{piece}}} lacks an onset");
                 }
                 real.push(nucleus);
             }
             // h-onset syllables must not
             ['\''] => {
                 if i == 0 {
-                    flip!(Jboraku, "{{'}} can't appear word-initially");
+                    flip!(SyllableError, "{{'}} can't appear word-initially");
                 }
                 let mut s = String::with_capacity(1 + nucleus.len());
                 s.push('\'');
@@ -247,7 +247,7 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
             }
             // evil q/w/'
             o if let Some(c) = o.iter().find(|&&c| is_onglide(c) || c == '\'') => {
-                flip!(Jboraku, "{{{c}}} can't be adjacent to consonants");
+                flip!(SyllableError, "{{{c}}} can't be adjacent to consonants");
             }
             // the scary case.
             // try treating each suffix of the onset (longest first) as a hard onset, assuming the
@@ -273,14 +273,16 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
                             && let (Some(coda), Some(c)) = (coda, hard_onset.chars().next())
                             && !test_bytes!(is_valid(coda, c))
                         {
-                            best_err = Some(fli!(Jboraku, "{{{coda}{c}}} is an invalid cluster"));
+                            best_err =
+                                Some(fli!(SyllableError, "{{{coda}{c}}} is an invalid cluster"));
                             return None;
                         }
                         if !consonantal_syllables.is_empty()
                             && let (Some(&r), Some(c)) = (prefix.last(), hard_onset.chars().next())
                             && !test_bytes!(is_valid(r, c))
                         {
-                            best_err = Some(fli!(Jboraku, "{{{r}{c}}} is an invalid cluster"));
+                            best_err =
+                                Some(fli!(SyllableError, "{{{r}{c}}} is an invalid cluster"));
                             return None;
                         }
                         if let Some(coda) = coda
@@ -292,7 +294,7 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
                             let second = chars.next().unwrap_or_else(oob);
                             if test_bytes!(is_banned_triple(coda, first, second)) {
                                 best_err = Some(fli!(
-                                    Jboraku,
+                                    SyllableError,
                                     "{{{coda}{first}{second}}} is a banned triple"
                                 ));
                                 return None;
