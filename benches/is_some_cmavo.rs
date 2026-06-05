@@ -1,8 +1,11 @@
 use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use jvot3::prewords::is_some_cmavo;
-use jvot3::settings::Settings;
+use jvot3::{prewords::is_some_cmavo, settings::Settings};
+
+fn two_long_y_cmavo(k: usize) -> String {
+    format!("ko{}'y", "'a".repeat(k)).repeat(2)
+}
 
 fn bench_is_some_cmavo(c: &mut Criterion) {
     let cll: Settings = "".parse().unwrap();
@@ -16,7 +19,7 @@ fn bench_is_some_cmavo(c: &mut Criterion) {
     group.bench_function("cv_1", |b| b.iter(|| is_some_cmavo(black_box("ko"), &cll)));
     group.bench_function("apo_1", |b| b.iter(|| is_some_cmavo(black_box("pa'e"), &cll)));
 
-    // y-boundary logic (the interesting part)
+    // y boundaries
     group.bench_function("ychain_4_cll", |b| b.iter(|| is_some_cmavo(black_box("bycydyfy"), &cll)));
     group.bench_function("ychain_4_r", |b| b.iter(|| is_some_cmavo(black_box("bycydyfy"), &r)));
     group.bench_function("yapo_cll", |b| b.iter(|| is_some_cmavo(black_box("te'yna'y"), &cll)));
@@ -50,6 +53,20 @@ fn bench_is_some_cmavo(c: &mut Criterion) {
     });
     group.bench_function("yapo_1000ch_r", |b| {
         b.iter(|| is_some_cmavo(black_box(&"te'yna'y".repeat(len / 8)), &r))
+    });
+
+    // really long cmavo in r mode
+    group.bench_function("two_y_10syl_r", |b| {
+        b.iter(|| is_some_cmavo(black_box(&two_long_y_cmavo(8)), &r))
+    });
+    group.bench_function("two_y_100syl_r", |b| {
+        b.iter(|| is_some_cmavo(black_box(&two_long_y_cmavo(98)), &r))
+    });
+    group.bench_function("two_y_1000syl_r", |b| {
+        b.iter(|| is_some_cmavo(black_box(&two_long_y_cmavo(998)), &r))
+    });
+    group.bench_function("two_y_1000syl_cll", |b| {
+        b.iter(|| is_some_cmavo(black_box(&two_long_y_cmavo(998)), &cll))
     });
 
     group.finish();
