@@ -122,7 +122,7 @@ When you have a candidate brivla that's invalid because you can prepend a CV cma
 example
 
 - *\*slinku'i* is an invalid zi'evla because you can prepend *no* to get *nos-lin-ku'i*
-- *\*klingonygu'e* is an invalid lujvo because prepending *pa* gives *pak-lin-gon-y-gu'e*
+- *\*klingonygu'e* is an invalid lujvo (of *klingona gugde*) because prepending *pa* gives *pak-lin-gon-y-gu'e*
 
 ### Sli'ykru
 

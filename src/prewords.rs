@@ -1,13 +1,13 @@
 use itertools::Itertools as _;
 
 use crate::{
-    fli,
-    flip,
+    fli, flip,
     jvofli::{Jvofli, Jvoflikle::SyllableError},
     phonology::{
         is_banned_triple, is_diphthong, is_hard_consonant, is_hard_onset, is_initial, is_offglide,
         is_onglide, is_sonorant, is_valid, is_vowel,
-    }, // all of these are const
+    },
+    settings::Settings,
     test_bytes,
 };
 
@@ -318,23 +318,6 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
     Ok(real)
 }
 
-/// Groups syllables into jboraku, runs of syllables where the first one has a
-/// non-*'* onset and the rest have *'* onsets.
-pub fn jborakufy(syllables: &[String]) -> Vec<String> {
-    let mut result: Vec<String> = vec![];
-    for syll in syllables {
-        if syll.starts_with('\'') {
-            match result.last_mut() {
-                Some(prev) => prev.push_str(syll),
-                None => result.push(syll.clone()),
-            }
-        } else {
-            result.push(syll.clone());
-        }
-    }
-    result
-}
-
 #[allow(clippy::many_single_char_names)]
 pub const fn is_gismu(s: &str) -> bool {
     let &[a, b, c, d, e] = s.as_bytes() else { return false };
@@ -346,129 +329,253 @@ pub const fn is_gismu(s: &str) -> bool {
         && (is_vowel(b as char) && is_valid(cd) || is_vowel(c as char) && is_initial(ab))
 }
 
-/// Returns `true` if `s` is some cmavo (jboraku each with at most 1 hard
-/// consonant).
-pub fn is_some_cmavo(s: &str) -> bool {
-    syllabify(s).is_ok_and(|y| {
-        jborakufy(&y).iter().all(|r| r.chars().filter(|c| is_hard_consonant(*c)).count() <= 1)
-    })
+/// Returns `true` if the first syllable of `sylls` is CV or CF. It does not consider the rest of the syllables at all.
+fn starts_with_one_cmavo(sylls: &[String]) -> bool {
+    let Some(first) = sylls.first() else { return false };
+    first.chars().filter(|c| is_hard_consonant(*c)).nth(1).is_none()
+        && first.ends_with(|c| is_vowel(c) || is_offglide(c))
+}
+
+/// Returns `true` if `s` is some cmavo. `settings.arbitrary_cmavo_rafsi` affects which cmavo ending in *y* need pauses after them.
+pub fn is_some_cmavo(s: &str, settings: &Settings) -> bool {
+    let Ok(sylls) = syllabify(s) else { return false };
+    let mut sylls = &*sylls;
+    while !sylls.is_empty() {
+        if starts_with_one_cmavo(sylls) {
+            let next = sylls
+                .iter()
+                .enumerate()
+                .skip(1)
+                .find(|(_, s)| s.starts_with(|c| is_hard_consonant(c) || is_onglide(c)))
+                .map(|(i, _)| i);
+            if let Some(i) = next {
+                if sylls[i - 1].ends_with('y')
+                    && (sylls[i - 1]
+                        .starts_with(|c| is_hard_consonant(c) || is_onglide(c) || c == 'y')
+                        || settings.arbitrary_cmavo_rafsi)
+                    && !(if settings.arbitrary_cmavo_rafsi {
+                        let end = sylls[i + 1..]
+                            .iter()
+                            .position(|s| !s.starts_with('\''))
+                            .map_or(sylls.len(), |p| i + 1 + p);
+                        sylls[i + 1..end].iter().all(|s| {
+                            s.starts_with('\'') && s.ends_with(|c| is_vowel(c) || is_offglide(c))
+                        }) && sylls[end - 1].ends_with('y')
+                    } else {
+                        sylls[i].len() == 2 && sylls[i].ends_with('y')
+                    })
+                {
+                    return false;
+                }
+                sylls = &sylls[i..];
+            } else {
+                sylls = &[];
+            }
+        } else {
+            return false;
+        }
+    }
+    true
 }
 
 /// Tests.
+#[cfg(test)]
 mod tests {
-    #![cfg(test)]
     use super::*;
 
     macro_rules! ok {
         (mark_glides; $in:literal => $out:literal) => {
             assert_eq!(mark_glides($in), Ok($out.to_string()));
         };
-        ($f:ident; $in:literal => $($out:literal),+) => {
-            assert_eq!($f($in), Ok([$($out),+].iter().map(ToString::to_string).collect_vec()));
+        (syllabify; $in:literal => $($out:literal),+) => {
+            assert_eq!(syllabify($in), Ok([$($out),+].iter().map(ToString::to_string).collect_vec()));
+        };
+        (is_some_cmavo as $settings:literal; $in:literal) => {
+            assert!(is_some_cmavo($in, &$settings.parse().unwrap()));
         };
     }
     macro_rules! err {
+        (is_some_cmavo as $settings:literal; $in:literal) => {
+            assert!(!is_some_cmavo($in, &$settings.parse().unwrap()));
+        };
         ($f:ident; $in:literal) => {
             let res = $f($in);
             assert!(res.is_err(), "{res:?}");
         };
     }
 
-    #[test]
-    fn t_markglides_plukauaii_ok() {
-        ok!(mark_glides; "plukauaii" => "plukawaqi");
-    }
-    #[test]
-    fn t_markglides_12u_ok() {
-        ok!(mark_glides; "uuuuuuuuuuuu" => "wuwuwuwuwuwu");
-    }
-    #[test]
-    fn t_markglides_13u_ok() {
-        ok!(mark_glides; "uuuuuuuuuuuuu" => "uwuwuwuwuwuwu");
-    }
-    #[test]
-    fn t_markglides_auia_ok() {
-        ok!(mark_glides; "auia" => "aŭqa");
-    }
-    #[test]
-    fn t_markglides_aiia_err() {
-        err!(mark_glides; "aiia");
-    }
-    #[test]
-    fn t_markglides_eu_err() {
-        err!(mark_glides; "eu");
-    }
-    #[test]
-    fn t_markglides_eua_ok() {
-        ok!(mark_glides; "eua" => "ewa");
+    #[cfg(test)]
+    mod mark_glides {
+        use super::*;
+        #[test]
+        fn plukauaii_ok() {
+            ok!(mark_glides; "plukauaii" => "plukawaqi");
+        }
+        #[test]
+        fn u12_ok() {
+            ok!(mark_glides; "uuuuuuuuuuuu" => "wuwuwuwuwuwu");
+        }
+        #[test]
+        fn u13_ok() {
+            ok!(mark_glides; "uuuuuuuuuuuuu" => "uwuwuwuwuwuwu");
+        }
+        #[test]
+        fn auia_ok() {
+            ok!(mark_glides; "auia" => "aŭqa");
+        }
+        #[test]
+        fn aiia_err() {
+            err!(mark_glides; "aiia");
+        }
+        #[test]
+        fn eu_err() {
+            err!(mark_glides; "eu");
+        }
+        #[test]
+        fn eua_ok() {
+            ok!(mark_glides; "eua" => "ewa");
+        }
     }
 
-    #[test]
-    fn t_syllabify_latkerlo_ok() {
-        ok!(syllabify; "latkerlo" => "lat", "ker", "lo");
+    #[cfg(test)]
+    mod syllabify {
+        use super::*;
+        #[test]
+        fn latkerlo_ok() {
+            ok!(syllabify; "latkerlo" => "lat", "ker", "lo");
+        }
+        #[test]
+        fn sakprtlfmsngeha_ok() {
+            ok!(syllabify; "sakprtlfmsnge'a" => "sak", "pr", "tl", "fm", "sn", "ge", "'a");
+        }
+        #[test]
+        fn glek_ok() {
+            ok!(syllabify; "glek" => "glek");
+        }
+        #[test]
+        fn apba_err() {
+            err!(syllabify; "apba");
+        }
+        #[test]
+        fn apqa_err() {
+            err!(syllabify; "apqa");
+        }
+        #[test]
+        fn apyb_ok() {
+            ok!(syllabify; "apyb" => "a", "pyb");
+        }
+        #[test]
+        fn apb_err() {
+            err!(syllabify; "apb");
+        }
+        #[test]
+        fn aplbra_ok() {
+            ok!(syllabify; "aplbra" => "a", "pl", "bra");
+        }
+        #[test]
+        fn aplua_err() {
+            err!(syllabify; "aplua");
+        }
+        #[test]
+        fn an_ok() {
+            ok!(syllabify; "an" => "an");
+        }
+        #[test]
+        fn ant_err() {
+            err!(syllabify; "ant"); // syllables can end in at most 1 consonant
+        }
+        #[test]
+        fn antka_err() {
+            err!(syllabify; "antka"); // ant,ka and an,tka are both illegal
+        }
+        #[test]
+        fn cipnrstrigi_ok() {
+            ok!(syllabify; "cipnrstrigi" => "cip", "nr", "stri", "gi");
+        }
+        #[test]
+        fn apcnli_ok() {
+            ok!(syllabify; "apcnli" => "ap", "cn", "li");
+        }
+        #[test]
+        fn nondza_err() {
+            err!(syllabify; "nondza");
+        }
+        #[test]
+        fn djarrspageti_err() {
+            err!(syllabify; "djarrspageti");
+        }
+        #[test]
+        fn ivllava_err() {
+            err!(syllabify; "ivllava");
+        }
     }
-    #[test]
-    fn t_syllabify_sakprtlfmsngeha_ok() {
-        ok!(syllabify; "sakprtlfmsnge'a" => "sak", "pr", "tl", "fm", "sn", "ge", "'a");
-    }
-    #[test]
-    fn t_syllabify_glek_ok() {
-        ok!(syllabify; "glek" => "glek");
-    }
-    #[test]
-    fn t_syllabify_apba_err() {
-        err!(syllabify; "apba");
-    }
-    #[test]
-    fn t_syllabify_apqa_err() {
-        err!(syllabify; "apqa");
-    }
-    #[test]
-    fn t_syllabify_apyb_ok() {
-        ok!(syllabify; "apyb" => "a", "pyb");
-    }
-    #[test]
-    fn t_syllabify_apb_err() {
-        err!(syllabify; "apb");
-    }
-    #[test]
-    fn t_syllabify_aplbra_ok() {
-        ok!(syllabify; "aplbra" => "a", "pl", "bra");
-    }
-    #[test]
-    fn t_syllabify_aplua_err() {
-        err!(syllabify; "aplua");
-    }
-    #[test]
-    fn t_syllabify_an_ok() {
-        ok!(syllabify; "an" => "an");
-    }
-    #[test]
-    fn t_syllabify_ant_err() {
-        err!(syllabify; "ant"); // syllables can end in at most 1 consonant
-    }
-    #[test]
-    fn t_syllabify_antka_err() {
-        err!(syllabify; "antka"); // ant,ka and an,tka are both illegal
-    }
-    #[test]
-    fn t_syllabify_cipnrstrigi_ok() {
-        ok!(syllabify; "cipnrstrigi" => "cip", "nr", "stri", "gi");
-    }
-    #[test]
-    fn t_syllabify_apcnli_ok() {
-        ok!(syllabify; "apcnli" => "ap", "cn", "li");
-    }
-    #[test]
-    fn t_syllabify_nondza_err() {
-        err!(syllabify; "nondza");
-    }
-    #[test]
-    fn t_syllabify_djarrspageti_err() {
-        err!(syllabify; "djarrspageti");
-    }
-    #[test]
-    fn t_syllabify_ivllava_err() {
-        err!(syllabify; "ivllava");
+
+    #[cfg(test)]
+    mod is_some_cmavo {
+        use super::*;
+        #[test]
+        fn iesai_ok() {
+            ok!(is_some_cmavo as ""; "iesai");
+        }
+        #[test]
+        fn pahe_ok() {
+            ok!(is_some_cmavo as ""; "pa'e");
+        }
+        #[test]
+        fn yhy_ok() {
+            ok!(is_some_cmavo as ""; "y'y");
+        }
+        #[test]
+        fn anba_err() {
+            err!(is_some_cmavo as ""; "anba");
+        }
+        #[test]
+        fn bycydyfy_cll_ok() {
+            ok!(is_some_cmavo as ""; "bycydyfy");
+        }
+        #[test]
+        fn bycydyfy_r_ok() {
+            ok!(is_some_cmavo as "r"; "bycydyfy");
+        }
+        #[test]
+        fn tehynahy_cll_ok() {
+            ok!(is_some_cmavo as ""; "te'yna'y");
+        }
+        #[test]
+        fn tehynahy_r_ok() {
+            ok!(is_some_cmavo as "r"; "te'yna'y");
+        }
+        #[test]
+        fn bynahy_cll_err() {
+            err!(is_some_cmavo as ""; "byna'y");
+        }
+        #[test]
+        fn bynahy_r_ok() {
+            ok!(is_some_cmavo as "r"; "byna'y");
+        }
+        #[test]
+        fn bavyteikehu_cll_err() {
+            err!(is_some_cmavo as ""; "bavyteike'u");
+        }
+        #[test]
+        fn bavyteikehu_r_err() {
+            err!(is_some_cmavo as "r"; "bavyteike'u");
+        }
+        #[test]
+        fn bahyteikehu_cll_ok() {
+            ok!(is_some_cmavo as ""; "ba'yteike'u");
+        }
+        #[test]
+        fn bahyteikehu_r_err() {
+            err!(is_some_cmavo as "r"; "ba'yteike'u");
+        }
+        #[test]
+        fn zihybalvi_cll_err() {
+            err!(is_some_cmavo as ""; "zi'ybalvi");
+        }
+        #[test]
+        fn zihybalvi_r_err() {
+            err!(is_some_cmavo as "r"; "zi'ybalvi");
+        }
     }
 }

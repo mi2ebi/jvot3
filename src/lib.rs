@@ -4,3 +4,4 @@ pub mod jvofli;
 pub mod phonology;
 pub mod prewords;
 // pub mod rafsi;
+pub mod settings;
