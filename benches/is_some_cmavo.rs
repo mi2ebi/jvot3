@@ -6,6 +6,8 @@ use std::hint::black_box;
 use criterion::{Criterion, criterion_group, criterion_main};
 use jvot3::{prewords::is_some_cmavo, settings::Settings};
 
+const G: &str = "is_some_cmavo";
+
 fn two_long_y_cmavo(k: usize) -> String { format!("ko{}'y", "'a".repeat(k)).repeat(2) }
 
 fn bench_is_some_cmavo(c: &mut Criterion) {
@@ -13,7 +15,6 @@ fn bench_is_some_cmavo(c: &mut Criterion) {
     let r: Settings = "r".parse().unwrap();
     let len = 1000;
 
-    const G: &str = "is_some_cmavo";
     let mut group = c.benchmark_group(G);
 
     // single cmavo
@@ -35,36 +36,36 @@ fn bench_is_some_cmavo(c: &mut Criterion) {
 
     // long chains
     bench!(group, G / "cv_1kc", |b| {
-        b.iter(|| is_some_cmavo(black_box(&"ko".repeat(len / 2)), &cll))
+        b.iter(|| is_some_cmavo(black_box(&"ko".repeat(len / 2)), &cll));
     });
     bench!(group, G / "ych_1kc_x", |b| {
-        b.iter(|| is_some_cmavo(black_box(&"bycydyfy".repeat(len / 8)), &cll))
+        b.iter(|| is_some_cmavo(black_box(&"bycydyfy".repeat(len / 8)), &cll));
     });
     bench!(group, G / "ych_1kc_r", |b| {
-        b.iter(|| is_some_cmavo(black_box(&"bycydyfy".repeat(len / 8)), &r))
+        b.iter(|| is_some_cmavo(black_box(&"bycydyfy".repeat(len / 8)), &r));
     });
     bench!(group, G / "apo_1kc", |b| {
-        b.iter(|| is_some_cmavo(black_box(&"pa'e".repeat(len / 4)), &cll))
+        b.iter(|| is_some_cmavo(black_box(&"pa'e".repeat(len / 4)), &cll));
     });
     bench!(group, G / "hy_1kc_x", |b| {
-        b.iter(|| is_some_cmavo(black_box(&"te'yna'y".repeat(len / 8)), &cll))
+        b.iter(|| is_some_cmavo(black_box(&"te'yna'y".repeat(len / 8)), &cll));
     });
     bench!(group, G / "hy_1kc_r", |b| {
-        b.iter(|| is_some_cmavo(black_box(&"te'yna'y".repeat(len / 8)), &r))
+        b.iter(|| is_some_cmavo(black_box(&"te'yna'y".repeat(len / 8)), &r));
     });
 
     // really long cmavo in r mode
     bench!(group, G / "2y_10s_r", |b| {
-        b.iter(|| is_some_cmavo(black_box(&two_long_y_cmavo(8)), &r))
+        b.iter(|| is_some_cmavo(black_box(&two_long_y_cmavo(8)), &r));
     });
     bench!(group, G / "2y_100s_r", |b| {
-        b.iter(|| is_some_cmavo(black_box(&two_long_y_cmavo(98)), &r))
+        b.iter(|| is_some_cmavo(black_box(&two_long_y_cmavo(98)), &r));
     });
     bench!(group, G / "2y_1ks_r", |b| {
-        b.iter(|| is_some_cmavo(black_box(&two_long_y_cmavo(998)), &r))
+        b.iter(|| is_some_cmavo(black_box(&two_long_y_cmavo(998)), &r));
     });
     bench!(group, G / "2y_1ks_x", |b| {
-        b.iter(|| is_some_cmavo(black_box(&two_long_y_cmavo(998)), &cll))
+        b.iter(|| is_some_cmavo(black_box(&two_long_y_cmavo(998)), &cll));
     });
 
     group.finish();

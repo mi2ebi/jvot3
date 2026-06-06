@@ -54,7 +54,7 @@ impl Display for Settings {
     /// Displays a `Settings`. `crgz` indicate `generate_cmevla`,
     /// `arbitrary_cmavo_rafsi`, `onglides_are_brivla_consonants`, and
     /// `allow_mz` respectively. `AF` and `21` select [`HyphenSetting`] and
-    /// [`ConsonantSetting`]. In particular, [`CLL`](Self::CLL) produces `x` as
+    /// [`ConsonantSetting`]. In particular, [`Settings::CLL`] produces `x` as
     /// it would otherwise result in the empty string.
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         let mut s = String::new();
@@ -138,12 +138,13 @@ impl Settings {
         onglides_are_brivla_consonants: false,
         allow_mz: false,
     };
-    /// Settings that permit as many lujvo as possible (`A1rg`).
+    /// Settings that permit as many lujvo as possible (`A1rgz`).
     pub const PERMISSIVE: Self = Self {
         hyphens: AllowY,
         minimum_consonants: OneCons,
         arbitrary_cmavo_rafsi: true,
         onglides_are_brivla_consonants: true,
+        allow_mz: true,
         ..Self::CLL
     };
     const fn is_settings_char(c: char) -> bool {
