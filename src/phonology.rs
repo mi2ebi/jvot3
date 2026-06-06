@@ -42,9 +42,7 @@ pub const fn is_valid(s: &str) -> bool {
 
 /// Returns `true` if `s` is in [`VALID_TABLE`], or is *mz*.
 #[inline]
-pub const fn is_mz_valid(s: &str) -> bool {
-    is_valid(s) || matches!(s.as_bytes(), b"mz")
-}
+pub const fn is_mz_valid(s: &str) -> bool { is_valid(s) || matches!(s.as_bytes(), b"mz") }
 
 /// A bitmask of valid word-initial consonant clusters.
 pub const INITIAL_TABLE: [u32; 25] = [
@@ -132,33 +130,23 @@ pub const fn is_hard_onset(s: &str) -> bool {
 
 /// Returns `true` if `c` is an annotated onglide: *q* or *w*.
 #[inline]
-pub const fn is_onglide(c: char) -> bool {
-    matches!(c, 'q' | 'w')
-}
+pub const fn is_onglide(c: char) -> bool { matches!(c, 'q' | 'w') }
 
 /// Returns `true` if `c` is an annotated offglide: *ĭ* or *ŭ*.
 #[inline]
-pub const fn is_offglide(c: char) -> bool {
-    matches!(c, 'ĭ' | 'ŭ')
-}
+pub const fn is_offglide(c: char) -> bool { matches!(c, 'ĭ' | 'ŭ') }
 
 /// Returns `true` if `c` is a sonorant: one of *l m n r*.
 #[inline]
-pub const fn is_sonorant(c: char) -> bool {
-    matches!(c, 'l' | 'm' | 'n' | 'r')
-}
+pub const fn is_sonorant(c: char) -> bool { matches!(c, 'l' | 'm' | 'n' | 'r') }
 
 /// Returns `true` if `c` is a vowel: *a e i o u y*.
 #[inline]
-pub const fn is_vowel(c: char) -> bool {
-    matches!(c, 'a' | 'e' | 'i' | 'o' | 'u' | 'y')
-}
+pub const fn is_vowel(c: char) -> bool { matches!(c, 'a' | 'e' | 'i' | 'o' | 'u' | 'y') }
 
 /// Returns `true` if `c` is a diphthong: *ai ei oi au*.
 #[inline]
-pub const fn is_diphthong(s: &str) -> bool {
-    matches!(s.as_bytes(), b"ai" | b"ei" | b"oi" | b"au")
-}
+pub const fn is_diphthong(s: &str) -> bool { matches!(s.as_bytes(), b"ai" | b"ei" | b"oi" | b"au") }
 
 /*
 /// Returns `true` if `s` is a single vowel (other than *y*) or a diphthong. As

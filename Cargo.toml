@@ -7,7 +7,7 @@ description = "Tools for creating and decomposing Lojban lujvo."
 repository = "https://github.com/mi2ebi/jvot3"
 keywords = ["lojban", "lujvo", "linguistics", "cli"]
 categories = ["text-processing", "parser-implementations", "command-line-utilities"]
-rust-version = "1.95.0"
+# rust-version = "1.95.0"
 
 # [[bin]]
 # name = "jvotci"
@@ -21,6 +21,7 @@ lazy_format = "2.0.3"
 regex = "1.11.1"
 
 [dev-dependencies]
+const_format = { version = "0.2.36", features = ["assertcp"] }
 criterion = { version = "0.8.2", features = ["html_reports"] }
 
 [[bench]]

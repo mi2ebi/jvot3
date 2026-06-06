@@ -31,9 +31,7 @@ macro_rules! flip {
 impl Jvofli {
     /// Constructs a `Jvofli`. It's recommended to use one of the macros
     /// [`fli!`] or [`flip!`] instead.
-    pub const fn new(kind: Jvoflikle, msg: String) -> Self {
-        Self { kind, message: msg }
-    }
+    pub const fn new(kind: Jvoflikle, msg: String) -> Self { Self { kind, message: msg } }
 }
 impl Debug for Jvofli {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -41,8 +39,6 @@ impl Debug for Jvofli {
     }
 }
 impl Display for Jvofli {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.message)
-    }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "{}", self.message) }
 }
 impl Error for Jvofli {}

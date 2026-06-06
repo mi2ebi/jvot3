@@ -90,7 +90,8 @@ fn parse_previous_coda(chars: &[char]) -> Result<(Option<char>, Vec<String>), Jv
 /// Nicely packages consonantal syllables.
 ///
 /// # Errors
-/// Returns a [`SyllableError`] if there is anything that isn't a consonant syllable.
+/// Returns a [`SyllableError`] if there is anything that isn't a consonant
+/// syllable.
 fn as_consonantal_syllables(chars: &[char]) -> Result<Vec<String>, Jvofli> {
     if chars.is_empty() {
         return Ok(vec![]);
@@ -119,8 +120,8 @@ fn as_consonantal_syllables(chars: &[char]) -> Result<Vec<String>, Jvofli> {
 /// Applies a parsed coda to the syllable list.
 ///
 /// # Errors
-/// Returns a [`SyllableError`] if the cluster at the syllable boundary is invalid, or
-/// if there is no previous syllable for a coda to attach to.
+/// Returns a [`SyllableError`] if the cluster at the syllable boundary is
+/// invalid, or if there is no previous syllable for a coda to attach to.
 fn apply_coda(
     real: &mut Vec<String>,
     chars: &[char],
@@ -148,8 +149,8 @@ fn apply_coda(
         let Some(prev) = real.last_mut() else {
             let next = next.unwrap_or_else(|| {
                 unreachable!(
-                    "[apply_coda] `next` and `real.last_mut()` can't both be `None`: \
-                     word-final codas always have a previous syllable, and if not it should be caught by \
+                    "[apply_coda] `next` and `real.last_mut()` can't both be `None`: word-final \
+                     codas always have a previous syllable, and if not it should be caught by \
                      'has no vowels'"
                 )
             });
@@ -185,7 +186,8 @@ fn split_after_nuclei(s: &str) -> Vec<&str> {
 /// Splits a unit in standard spelling into syllables.
 ///
 /// # Errors
-/// Returns a [`SyllableError`] if the input can't be split into valid syllables.
+/// Returns a [`SyllableError`] if the input can't be split into valid
+/// syllables.
 #[allow(clippy::too_many_lines)]
 pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
     check_lojban_only(input)?;
@@ -329,51 +331,61 @@ pub const fn is_gismu(s: &str) -> bool {
         && (is_vowel(b as char) && is_valid(cd) || is_vowel(c as char) && is_initial(ab))
 }
 
-/// Returns `true` if the first syllable of `sylls` is CV or CF. It does not consider the rest of the syllables at all.
+/// Returns `true` if the first syllable of `sylls` is CV or CF. It does not
+/// consider the rest of the syllables at all.
 fn starts_with_one_cmavo(sylls: &[String]) -> bool {
     let Some(first) = sylls.first() else { return false };
     first.chars().filter(|c| is_hard_consonant(*c)).nth(1).is_none()
         && first.ends_with(|c| is_vowel(c) || is_offglide(c))
 }
 
-/// Returns `true` if `s` is some cmavo. `settings.arbitrary_cmavo_rafsi` affects which cmavo ending in *y* need pauses after them.
+/// Returns true if this syllable requires a cmavo ending in *y* after it. `arb`
+/// indicates whether we care about all cmavo ending in *y* (`true`), or only
+/// *Cy* cmavo like CLL says (`false`).
+fn requires_y_next(syll: &str, arb: bool) -> bool {
+    syll.ends_with('y')
+        && (arb || syll.starts_with(|c| is_hard_consonant(c) || is_onglide(c) || c == 'y'))
+}
+
+/// Returns `true` if `sylls[i + 1]` is the first syllable of a cmavo ending in
+/// *y*. `arb` indicates whether we care about all cmavo ending in *y* (`true`),
+/// or only *Cy* cmavo like CLL says (`false`).
+fn next_cmavo_ends_in_y(sylls: &[String], i: usize, arb: bool) -> bool {
+    if arb {
+        let end = sylls[i + 1..]
+            .iter()
+            .position(|s| !s.starts_with('\''))
+            .map_or(sylls.len(), |p| i + 1 + p);
+        sylls[i + 1..end]
+            .iter()
+            .all(|s| s.starts_with('\'') && s.ends_with(|c| is_vowel(c) || is_offglide(c)))
+            && sylls[end - 1].ends_with('y')
+    } else {
+        sylls[i].len() == 2 && sylls[i].ends_with('y')
+    }
+}
+
+/// Returns `true` if `s` is some cmavo. `settings.arbitrary_cmavo_rafsi`
+/// affects which cmavo ending in *y* need pauses after them.
 pub fn is_some_cmavo(s: &str, settings: &Settings) -> bool {
     let Ok(sylls) = syllabify(s) else { return false };
+    let arb = settings.arbitrary_cmavo_rafsi;
     let mut sylls = &*sylls;
     while !sylls.is_empty() {
-        if starts_with_one_cmavo(sylls) {
-            let next = sylls
-                .iter()
-                .enumerate()
-                .skip(1)
-                .find(|(_, s)| s.starts_with(|c| is_hard_consonant(c) || is_onglide(c)))
-                .map(|(i, _)| i);
-            if let Some(i) = next {
-                if sylls[i - 1].ends_with('y')
-                    && (sylls[i - 1]
-                        .starts_with(|c| is_hard_consonant(c) || is_onglide(c) || c == 'y')
-                        || settings.arbitrary_cmavo_rafsi)
-                    && !(if settings.arbitrary_cmavo_rafsi {
-                        let end = sylls[i + 1..]
-                            .iter()
-                            .position(|s| !s.starts_with('\''))
-                            .map_or(sylls.len(), |p| i + 1 + p);
-                        sylls[i + 1..end].iter().all(|s| {
-                            s.starts_with('\'') && s.ends_with(|c| is_vowel(c) || is_offglide(c))
-                        }) && sylls[end - 1].ends_with('y')
-                    } else {
-                        sylls[i].len() == 2 && sylls[i].ends_with('y')
-                    })
-                {
-                    return false;
-                }
-                sylls = &sylls[i..];
-            } else {
-                sylls = &[];
-            }
-        } else {
+        if !starts_with_one_cmavo(sylls) {
             return false;
         }
+        let next = sylls
+            .iter()
+            .enumerate()
+            .skip(1)
+            .find(|(_, s)| s.starts_with(|c: char| is_hard_consonant(c) || is_onglide(c)))
+            .map(|(i, _)| i);
+        let Some(i) = next else { break };
+        if requires_y_next(&sylls[i - 1], arb) && !next_cmavo_ends_in_y(sylls, i, arb) {
+            return false;
+        }
+        sylls = &sylls[i..];
     }
     true
 }
@@ -515,23 +527,23 @@ mod tests {
         use super::*;
         #[test]
         fn iesai_ok() {
-            ok!(is_some_cmavo as ""; "iesai");
+            ok!(is_some_cmavo as "x"; "iesai");
         }
         #[test]
         fn pahe_ok() {
-            ok!(is_some_cmavo as ""; "pa'e");
+            ok!(is_some_cmavo as "x"; "pa'e");
         }
         #[test]
         fn yhy_ok() {
-            ok!(is_some_cmavo as ""; "y'y");
+            ok!(is_some_cmavo as "x"; "y'y");
         }
         #[test]
         fn anba_err() {
-            err!(is_some_cmavo as ""; "anba");
+            err!(is_some_cmavo as "x"; "anba");
         }
         #[test]
         fn bycydyfy_cll_ok() {
-            ok!(is_some_cmavo as ""; "bycydyfy");
+            ok!(is_some_cmavo as "x"; "bycydyfy");
         }
         #[test]
         fn bycydyfy_r_ok() {
@@ -539,7 +551,7 @@ mod tests {
         }
         #[test]
         fn tehynahy_cll_ok() {
-            ok!(is_some_cmavo as ""; "te'yna'y");
+            ok!(is_some_cmavo as "x"; "te'yna'y");
         }
         #[test]
         fn tehynahy_r_ok() {
@@ -547,7 +559,7 @@ mod tests {
         }
         #[test]
         fn bynahy_cll_err() {
-            err!(is_some_cmavo as ""; "byna'y");
+            err!(is_some_cmavo as "x"; "byna'y");
         }
         #[test]
         fn bynahy_r_ok() {
@@ -555,7 +567,7 @@ mod tests {
         }
         #[test]
         fn bavyteikehu_cll_err() {
-            err!(is_some_cmavo as ""; "bavyteike'u");
+            err!(is_some_cmavo as "x"; "bavyteike'u");
         }
         #[test]
         fn bavyteikehu_r_err() {
@@ -563,7 +575,7 @@ mod tests {
         }
         #[test]
         fn bahyteikehu_cll_ok() {
-            ok!(is_some_cmavo as ""; "ba'yteike'u");
+            ok!(is_some_cmavo as "x"; "ba'yteike'u");
         }
         #[test]
         fn bahyteikehu_r_err() {
@@ -571,7 +583,7 @@ mod tests {
         }
         #[test]
         fn zihybalvi_cll_err() {
-            err!(is_some_cmavo as ""; "zi'ybalvi");
+            err!(is_some_cmavo as "x"; "zi'ybalvi");
         }
         #[test]
         fn zihybalvi_r_err() {

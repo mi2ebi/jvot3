@@ -31,22 +31,31 @@ use HyphenSetting::{AllowY, ForceY, Standard};
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Copy)]
 pub struct Settings {
-    /// Whether the lujvo should end in a consonant. This only affects generating lujvo, and has no effect when decomposing them.
+    /// Whether the lujvo should end in a consonant. This only affects
+    /// generating lujvo, and has no effect when decomposing them.
     pub generate_cmevla: bool,
     /// What hyphens to allow.
     pub hyphens: HyphenSetting,
     /// Minimum consonant requirements.
     pub minimum_consonants: ConsonantSetting,
-    /// Allows any cmavo not containing *y* to be a rafsi. This requires adding a glottal stop after every cmavo ending in *y* rather than just *Cy* cmavo.
+    /// Allows any cmavo not containing *y* to be a rafsi. This requires adding
+    /// a glottal stop after every cmavo ending in *y* rather than just *Cy*
+    /// cmavo.
     pub arbitrary_cmavo_rafsi: bool,
-    /// Whether *q* and *w* are treated as consonants. Together with `arbitrary_cmavo_rafsi` and `minimum_consonants` this can produce lujvo with zero hard consonants, e.g. *qa'ywa*.
+    /// Whether *q* and *w* are treated as consonants. Together with
+    /// `arbitrary_cmavo_rafsi` and `minimum_consonants` this can produce lujvo
+    /// with zero hard consonants, e.g. *qa'ywa*.
     pub onglides_are_brivla_consonants: bool,
     /// Whether *mz* is considered a valid consonant cluster.
     pub allow_mz: bool,
 }
 
 impl Display for Settings {
-    /// Displays a `Settings`. `crgz` indicate `generate_cmevla`, `arbitrary_cmavo_rafsi`, `onglides_are_brivla_consonants`, and `allow_mz` respectively. `AF` and `21` select [`HyphenSetting`] and [`ConsonantSetting`]. In particular, [`CLL`](Self::CLL) produces the empty string.
+    /// Displays a `Settings`. `crgz` indicate `generate_cmevla`,
+    /// `arbitrary_cmavo_rafsi`, `onglides_are_brivla_consonants`, and
+    /// `allow_mz` respectively. `AF` and `21` select [`HyphenSetting`] and
+    /// [`ConsonantSetting`]. In particular, [`CLL`](Self::CLL) produces `x` as
+    /// it would otherwise result in the empty string.
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         let mut s = String::new();
         if self.generate_cmevla {
@@ -71,7 +80,7 @@ impl Display for Settings {
         if self.allow_mz {
             s.push('z');
         }
-        write!(f, "{s}")
+        if s.is_empty() { write!(f, "x") } else { write!(f, "{s}") }
     }
 }
 
@@ -79,13 +88,19 @@ impl Display for Settings {
 pub struct SettingsErr;
 impl FromStr for Settings {
     type Err = SettingsErr;
-    /// Tries to return a `Settings` that `Display`s as the input. `S` can be used for `HyphenSetting::Standard` and `C` can be used for `ConsonantSetting::Cluster`.
+    /// Tries to return a `Settings` that `Display`s as the input. `S` can be
+    /// used for `HyphenSetting::Standard`, `C` can be used for
+    /// `ConsonantSetting::Cluster`, and `x` by itself or the empty string
+    /// result in [`Settings::CLL`].
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.as_bytes();
+        if s == b"x" {
+            return Ok(Self::CLL);
+        }
         if b"crgz".iter().any(|x| s.iter().filter(|c| *c == x).nth(1).is_some())
             || s.iter().filter(|c| matches!(c, b'S' | b'A' | b'F')).nth(1).is_some()
             || s.iter().filter(|c| matches!(c, b'C' | b'2' | b'1')).nth(1).is_some()
-            || s.iter().any(|c| !Self::is_settings_char(*c as char))
+            || s.iter().any(|c| !Self::is_settings_char(*c as char) || *c == b'x')
         {
             return Err(SettingsErr);
         }
@@ -113,7 +128,8 @@ impl FromStr for Settings {
 }
 
 impl Settings {
-    /// Settings that are as close as possible to the CLL. Putting zi'evla in lujvo at all is still allowed.
+    /// Settings that are as close as possible to the CLL. Putting zi'evla in
+    /// lujvo at all is still allowed.
     pub const CLL: Self = Self {
         generate_cmevla: false,
         hyphens: Standard,
@@ -131,7 +147,7 @@ impl Settings {
         ..Self::CLL
     };
     const fn is_settings_char(c: char) -> bool {
-        matches!(c, 'c' | 'S' | 'A' | 'F' | 'C' | '2' | '1' | 'r' | 'g' | 'z')
+        matches!(c, 'x' | 'c' | 'S' | 'A' | 'F' | 'C' | '2' | '1' | 'r' | 'g' | 'z')
     }
     /// Modifies `self` by toggling each character in `flags`.
     pub fn apply_flags(&mut self, flags: &str) -> Option<()> {
@@ -145,6 +161,7 @@ impl Settings {
         }
         for f in flags.chars() {
             match f {
+                'x' => *self = Self::CLL,
                 'c' => self.generate_cmevla ^= true,
                 'r' => self.arbitrary_cmavo_rafsi ^= true,
                 'g' => self.onglides_are_brivla_consonants ^= true,

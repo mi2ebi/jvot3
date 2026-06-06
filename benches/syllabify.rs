@@ -1,3 +1,6 @@
+#[macro_use]
+mod common;
+
 use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
@@ -5,33 +8,36 @@ use jvot3::prewords::syllabify;
 
 fn bench_syllabify(c: &mut Criterion) {
     let len = 1000;
-    let zgifnzeha = "zgikemfi'inalka'esefsysajyke'ejvekemsefsyda'atoiflike'ejvejagborkemjilryjvesefsyborxenze'a";
+    let zgifnzeha = "zgikemfi'inalka'esefsysajyke'ejvekemsefsyda'atoiflike'\
+                     ejvejagborkemjilryjvesefsyborxenze'a";
 
-    let mut group = c.benchmark_group("syllabify");
+    const G: &str = "syllabify";
+    let mut group = c.benchmark_group(G);
 
     // single words
-    group.bench_function("easy_1", |b| b.iter(|| syllabify(black_box("ua"))));
-    group.bench_function("hard_1", |b| b.iter(|| syllabify(black_box("xazdmru"))));
-    group.bench_function("less_hard_1", |b| {
+    bench!(group, G / "easy_1", |b| b.iter(|| syllabify(black_box("ua"))));
+    bench!(group, G / "hard_1", |b| b.iter(|| syllabify(black_box("xazdmru"))));
+    bench!(group, G / "22cons_1", |b| {
         b.iter(|| syllabify(black_box("xazblblblblblblblblblblna")))
     });
-    group.bench_function("catgirl_1", |b| b.iter(|| syllabify(black_box("uu"))));
-    group.bench_function("zgifnzeha_1", |b| b.iter(|| syllabify(black_box(zgifnzeha))));
+    bench!(group, G / "catgirl_1", |b| b.iter(|| syllabify(black_box("uu"))));
+    bench!(group, G / "zgifnzeha_1", |b| b.iter(|| syllabify(black_box(zgifnzeha))));
 
     // long
-    group.bench_function("easy_1000ch", |b| b.iter(|| syllabify(black_box(&"ua".repeat(len / 2)))));
-    group.bench_function("hard_1000ch", |b| {
+    bench!(group, G / "easy_1kc", |b| b.iter(|| syllabify(black_box(&"ua".repeat(len / 2)))));
+    bench!(group, G / "hard_1kc", |b| {
         b.iter(|| syllabify(black_box(&"xazdmru".repeat(len / 7))))
     });
-    group.bench_function("less_hard_1000ch", |b| {
+    bench!(group, G / "22cons_1kc", |b| {
         b.iter(|| syllabify(black_box(&"xazblblblblblblblblblblna".repeat(len / 25))))
     });
-    group.bench_function("catgirl_1000ch", |b| {
+    bench!(group, G / "catgirl_1kc", |b| {
         b.iter(|| syllabify(black_box(&"uu".repeat(len / 2))))
     });
-    group.bench_function("zgifnzeha_1000ch", |b| {
+    bench!(group, G / "zgifnzeha_1kc", |b| {
         b.iter(|| syllabify(black_box(&zgifnzeha.repeat(len / 90))))
     });
+
     group.finish();
 }
 
