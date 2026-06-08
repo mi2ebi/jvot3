@@ -29,35 +29,45 @@ pub fn check_lojban_only(s: &str) -> Result<(), Jvofli> {
 /// # Errors
 /// Returns a [`SyllableError`] if any invalid falling diphthongs are used.
 pub fn mark_glides(input: &str) -> Result<String, Jvofli> {
-    let mut chars = input.chars().collect_vec();
-    for i in (0..chars.len()).rev() {
-        let c = chars[i];
-        if matches!(c, 'i' | 'u') {
-            let (on, off) = match c {
-                'i' => ('q', 'ĭ'),
-                'u' => ('w', 'ŭ'),
-                _ => {
-                    unreachable!("[mark_glides] only {{i/u}} should get here but this is a {{{c}}}")
-                }
-            };
-            if i != chars.len() - 1 && matches!(chars[i + 1], 'a' | 'e' | 'i' | 'o' | 'u' | 'y') {
-                chars[i] = on;
-            } else if i != 0
-                && let before = chars[i - 1]
-                && matches!(before, 'a' | 'e' | 'o' | 'y')
+    if !input.bytes().any(|b| matches!(b, b'i' | b'u')) {
+        return Ok(input.to_string());
+    }
+    let mut bytes = input.bytes().collect_vec();
+    for i in (0..bytes.len()).rev() {
+        let b = bytes[i];
+        if matches!(b, b'i' | b'u') {
+            let on = if b == b'i' { b'q' } else { b'w' };
+            let off = if b == b'i' { 0x01_u8 } else { 0x02 };
+            if i != bytes.len() - 1
+                && matches!(bytes[i + 1], b'a' | b'e' | b'i' | b'o' | b'u' | b'y')
             {
-                if test_bytes!(is_diphthong(before, c)) {
-                    chars[i] = off;
-                    if chars.get(i + 1).is_some_and(|&c| c == on) {
-                        flip!(SyllableError, "{{{off}{on}}} is invalid");
+                bytes[i] = on;
+            } else if i != 0
+                && let before = bytes[i - 1]
+                && matches!(before, b'a' | b'e' | b'o' | b'y')
+            {
+                if test_bytes!(is_diphthong(before, b)) {
+                    bytes[i] = off;
+                    if bytes.get(i + 1).is_some_and(|&c| c == on) {
+                        let (off_c, on_c) = if b == b'i' { ('ĭ', 'q') } else { ('ŭ', 'w') };
+                        flip!(SyllableError, "{{{off_c}{on_c}}} is invalid");
                     }
                 } else {
-                    flip!(SyllableError, "{{{before}{c}}} is not a valid diphthong");
+                    let (before_c, c) = (before as char, b as char);
+                    flip!(SyllableError, "{{{before_c}{c}}} is not a valid diphthong");
                 }
             }
         }
     }
-    Ok(chars.iter().collect::<String>())
+    let mut result = String::with_capacity(bytes.len() + 4);
+    for b in bytes {
+        match b {
+            0x01 => result.push('ĭ'),
+            0x02 => result.push('ŭ'),
+            _ => result.push(b as char),
+        }
+    }
+    Ok(result)
 }
 
 /// Extracts a coda from a list of consonants, and splits the rest into
