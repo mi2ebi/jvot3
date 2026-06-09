@@ -296,17 +296,22 @@ pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
                                 Some(fli!(SyllableError, "{{{r}{c}}} is an invalid cluster"));
                             return None;
                         }
-                        if let Some(coda) = coda
+                        let triple_prefix = if consonantal_syllables.is_empty() {
+                            coda
+                        } else {
+                            consonantal_syllables.last().and_then(|s| s.chars().last())
+                        };
+                        if let Some(pre) = triple_prefix
                             && hard_onset.len() >= 2
                         {
                             let mut chars = hard_onset.chars();
                             let oob = || unreachable!("[syllabify] `hard_onset` has a length < 2");
                             let first = chars.next().unwrap_or_else(oob);
                             let second = chars.next().unwrap_or_else(oob);
-                            if test_bytes!(is_banned_triple(coda, first, second)) {
+                            if test_bytes!(is_banned_triple(pre, first, second)) {
                                 best_err = Some(fli!(
                                     SyllableError,
-                                    "{{{coda}{first}{second}}} is a banned triple"
+                                    "{{{pre}{first}{second}}} is a banned triple"
                                 ));
                                 return None;
                             }
@@ -528,6 +533,14 @@ mod tests {
         #[test]
         fn ivllava_err() {
             err!(syllabify; "ivllava");
+        }
+        #[test]
+        fn dansrdjahaza_ok() {
+            ok!(syllabify; "dansrdja'aza" => "dan", "sr", "dja", "'a", "za");
+        }
+        #[test]
+        fn pandjeta_err() {
+            err!(syllabify; "pabndjeta");
         }
     }
 
