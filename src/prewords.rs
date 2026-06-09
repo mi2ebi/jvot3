@@ -36,8 +36,7 @@ pub fn mark_glides(input: &str) -> Result<String, Jvofli> {
     for i in (0..bytes.len()).rev() {
         let b = bytes[i];
         if matches!(b, b'i' | b'u') {
-            let on = if b == b'i' { b'q' } else { b'w' };
-            let off = if b == b'i' { 0x01_u8 } else { 0x02 };
+            let (on, off) = if b == b'i' { (b'q', 0x01_u8) } else { (b'w', 0x02) };
             if i != bytes.len() - 1
                 && matches!(bytes[i + 1], b'a' | b'e' | b'i' | b'o' | b'u' | b'y')
             {

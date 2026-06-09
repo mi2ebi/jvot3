@@ -38,9 +38,9 @@ pub struct Settings {
     pub hyphens: HyphenSetting,
     /// Minimum consonant requirements.
     pub minimum_consonants: ConsonantSetting,
-    /// Allows any cmavo not containing *y* to be a rafsi. This requires adding
-    /// a glottal stop after every cmavo ending in *y* rather than just *Cy*
-    /// cmavo.
+    /// Whether any cmavo not containing *y* may be a rafsi. This requires
+    /// adding a glottal stop after every cmavo ending in *y* rather than
+    /// just *Cy* cmavo.
     pub arbitrary_cmavo_rafsi: bool,
     /// Whether *q* and *w* are treated as consonants. Together with
     /// `arbitrary_cmavo_rafsi` and `minimum_consonants` this can produce lujvo
@@ -48,6 +48,9 @@ pub struct Settings {
     pub onglides_are_brivla_consonants: bool,
     /// Whether *mz* is considered a valid consonant cluster.
     pub allow_mz: bool,
+    /// Whether slinku'i are valid words. If `true` it assumes e.g. *paslinku'i*
+    /// is a tosmabru.
+    pub no_slinkuhi: bool,
 }
 
 impl Display for Settings {
@@ -79,6 +82,9 @@ impl Display for Settings {
         }
         if self.allow_mz {
             s.push('z');
+        }
+        if self.no_slinkuhi {
+            s.push('n');
         }
         if s.is_empty() { write!(f, "x") } else { write!(f, "{s}") }
     }
@@ -123,6 +129,7 @@ impl FromStr for Settings {
             arbitrary_cmavo_rafsi: s.contains(&b'r'),
             onglides_are_brivla_consonants: s.contains(&b'g'),
             allow_mz: s.contains(&b'z'),
+            no_slinkuhi: s.contains(&b'n'),
         })
     }
 }
@@ -137,6 +144,7 @@ impl Settings {
         arbitrary_cmavo_rafsi: false,
         onglides_are_brivla_consonants: false,
         allow_mz: false,
+        no_slinkuhi: false,
     };
     /// Settings that permit as many lujvo as possible (`A1rgz`).
     pub const PERMISSIVE: Self = Self {
@@ -167,6 +175,7 @@ impl Settings {
                 'r' => self.arbitrary_cmavo_rafsi ^= true,
                 'g' => self.onglides_are_brivla_consonants ^= true,
                 'z' => self.allow_mz ^= true,
+                'n' => self.no_slinkuhi ^= true,
                 'A' => toggle!(hyphens, AllowY),
                 'F' => toggle!(hyphens, ForceY),
                 'S' => self.hyphens = Standard,
