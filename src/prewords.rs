@@ -11,6 +11,32 @@ use crate::{
     test_bytes,
 };
 
+#[derive(Debug, Clone)]
+pub struct Syllable {
+    pub onset: String,
+    pub nucleus: String,
+    pub coda: Option<char>,
+    pub stressed: bool,
+}
+
+/// A list of Lojban syllables. Units are the result of taking some Lojban text
+/// and splitting it at mandatory pauses and after brivla.
+pub enum Unit {
+    /// A normal unit consists of a possibly empty sequence of cmaavo followed
+    /// by an optional pre-brivla.
+    Normal {
+        /// The list of syllables.
+        syllables: Vec<Syllable>,
+        /// The index in `syllables` that marks the start of the pre-brivla, if
+        /// it's present; i.e. this is `Some(0)` if there are no cmavo and
+        /// `None` if there is no pre-brivla.
+        pre_brivla_start: Option<usize>,
+    },
+    /// Cmevla are not required to consist of syllables at all, so we don't
+    /// bother trying to syllabify them.
+    Cmevla(String),
+}
+
 /// Checks if `s` only contains Lojban letters and returns `Ok(())` if so.
 ///
 /// # Errors
@@ -190,6 +216,9 @@ fn split_after_nuclei(s: &str) -> Vec<&str> {
 /// # Errors
 /// Returns a [`SyllableError`] if the input can't be split into valid
 /// syllables.
+///
+/// In particular, it is not expected that `syllabify` works on
+/// cmevla, as they are not required to consist of syllables at all.
 #[allow(clippy::too_many_lines)]
 pub fn syllabify(input: &str) -> Result<Vec<String>, Jvofli> {
     check_lojban_only(input)?;
@@ -532,7 +561,7 @@ mod tests {
             ok!(syllabify; "dansrdja'aza" => "dan", "sr", "dja", "'a", "za");
         }
         #[test]
-        fn pandjeta_err() {
+        fn pabndjeta_err() {
             err!(syllabify; "pabndjeta");
         }
     }

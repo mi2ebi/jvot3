@@ -1,7 +1,7 @@
 //! Various fast lookups for consonant clusters and vowels.
 
 /// A bitmask of valid consonant clusters.
-pub const VALID_TABLE: [u32; 25] = [
+const VALID_TABLE: [u32; 25] = [
     0b1_0001_0001_0001_1101_0010_0100, // bd bg bj bl bm bn br bv bz
     0b0_0000_0101_0101_1110_0001_0000, // cf ck cl cm cn cp cr ct
     0b1_0001_0001_0001_1101_0010_0001, // db dg dj dl dm dn dr dv dz
@@ -29,7 +29,7 @@ pub const VALID_TABLE: [u32; 25] = [
     0b0_0001_0001_0001_1100_0010_0101, // zb zd zg zl zm zn zr zv
 ];
 
-/// Returns `true` if `s` is in [`VALID_TABLE`].
+/// Returns `true` if `s` is a valid consonant cluster.
 pub const fn is_valid(s: &str) -> bool {
     let [x, y] = s.as_bytes() else { return false };
     let xi = x.wrapping_sub(b'b') as usize;
@@ -40,12 +40,12 @@ pub const fn is_valid(s: &str) -> bool {
     (VALID_TABLE[xi] >> yi) & 1 != 0
 }
 
-/// Returns `true` if `s` is in [`VALID_TABLE`], or is *mz*.
+/// Returns `true` if `s` is a valid consonant cluster or if it's *mz*.
 #[inline]
 pub const fn is_mz_valid(s: &str) -> bool { is_valid(s) || matches!(s.as_bytes(), b"mz") }
 
 /// A bitmask of valid word-initial consonant clusters.
-pub const INITIAL_TABLE: [u32; 25] = [
+const INITIAL_TABLE: [u32; 25] = [
     0b0_0000_0001_0000_0100_0000_0000, // bl br
     0b0_0000_0101_0101_1110_0001_0000, // cf ck cl cm cn cp cr ct
     0b1_0000_0001_0000_0001_0000_0000, // dj dr dz
@@ -73,7 +73,7 @@ pub const INITIAL_TABLE: [u32; 25] = [
     0b0_0001_0000_0000_1000_0010_0101, // zb zd zg zm zv
 ];
 
-/// Returns `true` if `s` is in [`INITIAL_TABLE`].
+/// Returns `true` if `s` is a valid word-initial consonant cluster.
 #[inline]
 pub const fn is_initial(s: &str) -> bool {
     let [x, y] = s.as_bytes() else { return false };
