@@ -156,14 +156,7 @@ fn apply_coda(
             );
         }
         let Some(prev) = real.last_mut() else {
-            let next = next.unwrap_or_else(|| {
-                unreachable!(
-                    "[apply_coda] `next` and `real.last_mut()` can't both be `None`: word-final \
-                     codas always have a previous syllable, and if not it should be caught by \
-                     'has no vowels'"
-                )
-            });
-            flip!(SyllableError, "{{{coda}{next}}} is an invalid word-initial cluster");
+            flip!(SyllableError, "{{{coda}}} can't be a coda at word start");
         };
         prev.push(coda);
     }
