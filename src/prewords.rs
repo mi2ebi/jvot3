@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use itertools::Itertools as _;
 
 use crate::{
@@ -22,19 +24,37 @@ pub struct Syllable {
 /// A list of Lojban syllables. Units are the result of taking some Lojban text
 /// and splitting it at mandatory pauses and after brivla.
 pub enum Unit {
-    /// A normal unit consists of a possibly empty sequence of cmaavo followed
-    /// by an optional pre-brivla.
+    /// A normal unit consists of a possibly empty sequence of cmavo followed by
+    /// an optional pre-brivla.
     Normal {
         /// The list of syllables.
         syllables: Vec<Syllable>,
         /// The index in `syllables` that marks the start of the pre-brivla, if
         /// it's present; i.e. this is `Some(0)` if there are no cmavo and
-        /// `None` if there is no pre-brivla.
+        /// `None` if there is no pre-brivla. Besides those two values it should
+        /// be the minimum of `syllables.len() - 2` and the index of the first
+        /// syllable with an onset cluster or a coda.
         pre_brivla_start: Option<usize>,
     },
     /// Cmevla are not required to consist of syllables at all, so we don't
     /// bother trying to syllabify them.
     Cmevla(String),
+}
+
+impl Unit {
+    #[inline]
+    pub const fn is_cmavo_only(&self) -> bool {
+        matches!(self, Self::Normal { pre_brivla_start: None, .. })
+    }
+    #[inline]
+    pub const fn is_pre_brivla_only(&self) -> bool {
+        matches!(self, Self::Normal { pre_brivla_start: Some(0), .. })
+    }
+}
+
+impl FromStr for Unit {
+    type Err = Jvofli;
+    fn from_str(_s: &str) -> Result<Self, Self::Err> { todo!("replacing syllabify etc") }
 }
 
 /// Checks if `s` only contains Lojban letters and returns `Ok(())` if so.
@@ -563,6 +583,10 @@ mod tests {
         #[test]
         fn pabndjeta_err() {
             err!(syllabify; "pabndjeta");
+        }
+        #[test]
+        fn tebmza_err() {
+            err!(syllabify; "tebmza");
         }
     }
 
