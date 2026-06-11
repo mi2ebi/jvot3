@@ -14,11 +14,8 @@ categories = ["text-processing", "parser-implementations", "command-line-utiliti
 # path = "src/main.rs"
 
 [dependencies]
-fancy-regex = "0.17.0"
-indexmap = "2.8.0"
+# fancy-regex = "0.18.0"
 itertools = "0.14.0"
-lazy_format = "2.0.3"
-regex = "1.11.1"
 
 [dev-dependencies]
 const_format = { version = "0.2.36", features = ["assertcp"] }
