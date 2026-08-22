@@ -1,174 +1,248 @@
 //! Various fast lookups for consonant clusters and vowels.
 
-/// A bitmask of valid consonant clusters.
+use std::sync::LazyLock;
+
+use bimap::BiHashMap;
+
+use crate::{extract_settings, settings::Settings};
+
+// - tables -
+
+const B: u32 = 1 << 0;
+const C: u32 = 1 << 1;
+const D: u32 = 1 << 2;
+const F: u32 = 1 << 4;
+const G: u32 = 1 << 5;
+const J: u32 = 1 << 8;
+const K: u32 = 1 << 9;
+const L: u32 = 1 << 10;
+const M: u32 = 1 << 11;
+const N: u32 = 1 << 12;
+const P: u32 = 1 << 14;
+const R: u32 = 1 << 16;
+const S: u32 = 1 << 17;
+const T: u32 = 1 << 18;
+const V: u32 = 1 << 20;
+const X: u32 = 1 << 22;
+const Z: u32 = 1 << 24;
+
+const VOICED: u32 = B | D | G | J | V | Z;
+const VOICELESS: u32 = C | F | K | P | S | T | X;
+const SONORANT: u32 = L | M | N | R;
+const ALL: u32 = VOICED | VOICELESS | SONORANT;
+const LIQUID: u32 = L | R;
+const SIBILANT: u32 = C | J | S | Z;
+
 const VALID_TABLE: [u32; 25] = [
-    0b1_0001_0001_0001_1101_0010_0100, // bd bg bj bl bm bn br bv bz
-    0b0_0000_0101_0101_1110_0001_0000, // cf ck cl cm cn cp cr ct
-    0b1_0001_0001_0001_1101_0010_0001, // db dg dj dl dm dn dr dv dz
+    /* b */ VOICED ^ B | SONORANT,
+    /* c */ VOICELESS & !(SIBILANT | X) | SONORANT,
+    /* d */ VOICED ^ D | SONORANT,
     0,
-    0b0_0100_0111_0101_1110_0000_0010, // fc fk fl fm fn fp fr fs ft fx
-    0b1_0001_0001_0001_1101_0000_0101, // gb gd gj gl gm gn gr gv gz
+    /* f */ VOICELESS ^ F | SONORANT,
+    /* g */ VOICED ^ G | SONORANT,
     0,
     0,
-    0b0_0001_0001_0001_1100_0010_0101, // jb jd jg jl jm jn jr jv
-    0b0_0000_0111_0101_1100_0001_0010, // kc kf kl km kn kp kr ks kt
-    0b1_0101_0111_0101_1011_0011_0111, // lb lc ld lf lg lj lk lm ln lp lr ls lt lv lx lz
-    0b0_0101_0111_0101_0111_0011_0111, // mb mc md mf mg mj mk ml mn mp mr ms mt mv mx
-    0b1_0101_0111_0100_1111_0011_0111, // nb nc nd nf ng nj nk nl nm np nr ns nt nv nx nz
+    /* j */ VOICED & !SIBILANT | SONORANT,
+    /* k */ VOICELESS ^ (K | X) | SONORANT,
+    /* l */ ALL ^ L,
+    /* m */ ALL ^ (M | Z), // lojban...
+    /* n */ ALL ^ N,
     0,
-    0b0_0100_0111_0001_1110_0001_0010, // pc pf pk pl pm pn pr ps pt px
+    /* p */ VOICELESS ^ P | SONORANT,
     0,
-    0b1_0101_0110_0101_1111_0011_0111, // rb rc rd rf rg rj rk rl rm rn rp rs rt rv rx rz
-    0b0_0100_0101_0101_1110_0001_0000, // sf sk sl sm sn sp sr st sx
-    0b0_0100_0011_0101_1110_0001_0010, // tc tf tk tl tm tn tp tr ts tx
+    /* r */ ALL ^ R,
+    /* s */ VOICELESS & !SIBILANT | SONORANT,
+    /* t */ VOICELESS ^ T | SONORANT,
     0,
-    0b1_0000_0001_0001_1101_0010_0101, // vb vd vg vj vl vm vn vr vz
+    /* v */ VOICED ^ V | SONORANT,
     0,
-    0b0_0000_0111_0101_1100_0001_0000, // xf xl xm xn xp xr xs xt
+    /* x */ VOICELESS ^ (C | K | X) | SONORANT,
     0,
-    0b0_0001_0001_0001_1100_0010_0101, // zb zd zg zl zm zn zr zv
+    /* z */ VOICED & !SIBILANT | SONORANT,
 ];
 
-/// Returns `true` if `s` is a valid consonant cluster.
-pub const fn is_valid(s: &str) -> bool {
-    let [x, y] = s.as_bytes() else { return false };
-    let xi = x.wrapping_sub(b'b') as usize;
-    let yi = y.wrapping_sub(b'b') as usize;
-    if xi >= 25 || yi >= 25 {
-        return false;
-    }
-    (VALID_TABLE[xi] >> yi) & 1 != 0
-}
-
-/// Returns `true` if `s` is a valid consonant cluster or if it's *mz*.
-#[inline]
-pub const fn is_mz_valid(s: &str) -> bool { is_valid(s) || matches!(s.as_bytes(), b"mz") }
-
-/// A bitmask of valid word-initial consonant clusters.
 const INITIAL_TABLE: [u32; 25] = [
-    0b0_0000_0001_0000_0100_0000_0000, // bl br
-    0b0_0000_0101_0101_1110_0001_0000, // cf ck cl cm cn cp cr ct
-    0b1_0000_0001_0000_0001_0000_0000, // dj dr dz
+    /* b */ LIQUID,
+    /* c */ VOICELESS & !(SIBILANT | X) | SONORANT,
+    /* d */ VOICED & SIBILANT | R,
     0,
-    0b0_0000_0001_0000_0100_0000_0000, // fl fr
-    0b0_0000_0001_0000_0100_0000_0000, // gl gr
-    0,
-    0,
-    0b0_0001_0000_0000_1000_0010_0101, // jb jd jg jm jv
-    0b0_0000_0001_0000_0100_0000_0000, // kl kr
-    0,
-    0b0_0000_0001_0000_0100_0000_0000, // ml mr
+    /* f */ LIQUID,
+    /* g */ LIQUID,
     0,
     0,
-    0b0_0000_0001_0000_0100_0000_0000, // pl pr
+    /* j */ VOICED & !SIBILANT | M,
+    /* k */ LIQUID,
+    0,
+    /* m */ LIQUID,
     0,
     0,
-    0b0_0000_0101_0101_1110_0001_0000, // sf sk sl sm sn sp sr st
-    0b0_0000_0011_0000_0000_0000_0010, // tc tr ts
+    /* p */ LIQUID,
     0,
-    0b0_0000_0001_0000_0100_0000_0000, // vl vr
     0,
-    0b0_0000_0001_0000_0100_0000_0000, // xl xr
+    /* s */ VOICELESS & !(SIBILANT | X) | SONORANT,
+    /* t */ VOICELESS & SIBILANT | R,
     0,
-    0b0_0001_0000_0000_1000_0010_0101, // zb zd zg zm zv
+    /* v */ LIQUID,
+    0,
+    /* x */ LIQUID,
+    0,
+    /* z */ VOICED & !SIBILANT | M,
 ];
 
-/// Returns `true` if `s` is a valid word-initial consonant cluster.
+// - vowels -
+
+/// Returns whether `c` is a stressable vowel (including when actually
+/// stressed): *a e i o u*.
 #[inline]
-pub const fn is_initial(s: &str) -> bool {
-    let [x, y] = s.as_bytes() else { return false };
+#[must_use]
+pub const fn is_stressable_vowel(c: char) -> bool {
+    matches!(c, 'a' | 'e' | 'i' | 'o' | 'u' | 'á' | 'é' | 'í' | 'ó' | 'ú')
+}
+
+/// Returns whether `c` is a vowel, i.e. including *y*, optionally with a stress
+/// mark (even for *y*, to produce better error messages).
+#[inline]
+#[must_use]
+pub const fn is_vowel(c: char) -> bool { is_stressable_vowel(c) || c == 'y' || c == 'ý' }
+
+/// Returns whether `x` and `y` form a diphthong: *ai au ei oi*.
+#[inline]
+#[must_use]
+pub const fn is_diphthong_chars(x: char, y: char) -> bool {
+    matches!([x, y], ['a' | 'á' | 'e' | 'é' | 'o' | 'ó', 'i'] | ['a' | 'á', 'u'])
+}
+
+#[inline]
+#[must_use]
+pub(crate) const fn is_annotated_onglide(c: char) -> bool { matches!(c, 'q' | 'w') }
+
+#[inline]
+#[must_use]
+pub(crate) const fn is_annotated_offglide(c: char) -> bool { matches!(c, 'ĭ' | 'ŭ') }
+
+/// Returns whether `c` is *i* or *u*.
+#[inline]
+#[must_use]
+pub const fn could_be_glide(c: char) -> bool { matches!(c, 'i' | 'u') }
+
+/// Normalizes an annotated glide character back to the plain vowel it
+/// represents (*q*/*ĭ* → *i*, *w*/*ŭ* → *u*).
+#[inline]
+#[must_use]
+pub const fn deannotate_glide(c: char) -> char {
+    match c {
+        'q' | 'ĭ' => 'i',
+        'w' | 'ŭ' => 'u',
+        _ => c,
+    }
+}
+
+static STRESS: LazyLock<BiHashMap<char, char>> = LazyLock::new(|| {
+    let mut m = BiHashMap::new();
+    m.insert('á', 'a');
+    m.insert('é', 'e');
+    m.insert('í', 'i');
+    m.insert('ó', 'o');
+    m.insert('ú', 'u');
+    m.insert('ý', 'y');
+    m
+});
+
+/// Removes the stress from a vowel, returning the plain vowel and whether it
+/// was stressed.
+pub fn strip_stress_accent(c: char) -> (char, bool) {
+    STRESS.get_by_left(&c).map_or((c, false), |&plain| (plain, true))
+}
+
+/// Adds explicit stress to a vowel.
+pub fn add_stress_accent(c: char) -> Option<char> { STRESS.get_by_right(&c).copied() }
+
+// - consonants -
+
+/// Returns whether `c` is in the given bitset, where bit `i` corresponds to
+/// the letter `b'b' + i`.
+#[inline]
+const fn is_in_set(c: u8, set: u32) -> bool {
+    let idx = (c as u32).wrapping_sub(b'b' as u32);
+    idx < 25 && (set >> idx) & 1 != 0
+}
+
+/// Returns whether `c` is a consonant, *excluding* apostrophe.
+#[inline]
+#[must_use]
+pub const fn is_hard_consonant(c: char) -> bool { is_in_set(c as u8, ALL) }
+
+/// Returns whether `c` is a consonant, *including* apsotrophe.
+#[inline]
+#[must_use]
+pub const fn is_consonant(c: char) -> bool { is_hard_consonant(c) || c == '\'' }
+
+/// Returns whether `c` is one of *l m n r*.
+#[inline]
+#[must_use]
+pub const fn is_sonorant(c: char) -> bool { is_in_set(c as u8, SONORANT) }
+
+// - clusters -
+
+/// Returns whether the byte pair `(x, y)` is allowed by `table`.
+#[inline]
+const fn check_pair(x: u8, y: u8, table: &[u32; 25]) -> bool {
     let xi = x.wrapping_sub(b'b') as usize;
     let yi = y.wrapping_sub(b'b') as usize;
     if xi >= 25 || yi >= 25 {
         return false;
     }
-    (INITIAL_TABLE[xi] >> yi) & 1 != 0
+    (table[xi] >> yi) & 1 != 0
 }
 
-/// Returns `true` if `s` is one of the consonant triples banned by CLL: *ndj
-/// ndz ntc nts*.
+/// Returns whether `x` and `y` form a valid consonant cluster. `settings` is
+/// used for `allow_mz`.
 #[inline]
-pub const fn is_banned_triple(s: &str) -> bool {
-    matches!(s.as_bytes(), b"ndj" | b"ndz" | b"ntc" | b"nts")
+#[must_use]
+pub const fn is_valid_chars(x: char, y: char, settings: Settings) -> bool {
+    let settings = extract_settings!(settings; allow_mz);
+    check_pair(x as u8, y as u8, &VALID_TABLE) || settings.allow_mz && x == 'm' && y == 'z'
 }
 
-/// Returns `true` if `c` is a hard consonant (any consonant except *'* and
-/// *.*).
+/// Returns whether `x` and `y` form a valid word-initial consonant cluster.
 #[inline]
-#[rustfmt::skip]
-pub const fn is_hard_consonant(c: char) -> bool {
-    matches!(
-        c,
-        'b' | 'c' | 'd' | 'f' | 'g' | 'j' | 'k' | 'l' | 'm' | 'n' | 'p' | 'r' | 's' | 't' | 'v'
-        | 'x' | 'z'
-    )
+#[must_use]
+pub const fn is_initial_chars(x: char, y: char) -> bool {
+    check_pair(x as u8, y as u8, &INITIAL_TABLE)
 }
 
-#[macro_export]
-macro_rules! test_bytes {
-    ($funcs:ident ($($char:expr),+)) => {{
-        if let Ok(s) = str::from_utf8(&[$($char as u8),+]) { $funcs(s) } else { false }
-    }}
-}
-
-/// Returns `true` if `s` is a permissible syllable onset.
+/// Returns whether `x`, `y`, and `z` form one of the consonant triples banned
+/// by CLL: *ndj ndz ntc nts*.
 #[inline]
+#[must_use]
+pub const fn is_banned_triple_chars(x: char, y: char, z: char) -> bool {
+    x == 'n' && matches!([y, z], ['d', 'j' | 'z'] | ['t', 'c' | 's'])
+}
+
+/// Returns whether `s` is a hard onset (an onset consisting only of characters
+/// that [`is_hard_consonant`]).
+#[inline]
+#[must_use]
 pub const fn is_hard_onset(s: &str) -> bool {
-    match s.as_bytes() {
-        [] => true,
-        &[x] => is_hard_consonant(x as char),
-        &[_, _] => is_initial(s),
-        &[x, y, z] => {
-            matches!(x, b'c' | b'j' | b's' | b'z')
-                && test_bytes!(is_initial(x, y))
-                && test_bytes!(is_initial(y, z))
-                && matches!(z, b'l' | b'r')
+    match *s.as_bytes() {
+        [x] => is_in_set(x, ALL),
+        [x, y] => check_pair(x, y, &INITIAL_TABLE),
+        [x, y, z] => {
+            is_in_set(x, SIBILANT)
+                && is_in_set(z, LIQUID)
+                && check_pair(x, y, &INITIAL_TABLE)
+                && check_pair(y, z, &INITIAL_TABLE)
         }
         _ => false,
     }
 }
 
-/// Returns `true` if `c` is an annotated onglide: *q* or *w*.
-#[inline]
-pub const fn is_onglide(c: char) -> bool { matches!(c, 'q' | 'w') }
+// - hyphens -
 
-/// Returns `true` if `c` is an annotated offglide: *ĭ* or *ŭ*.
-#[inline]
-pub const fn is_offglide(c: char) -> bool { matches!(c, 'ĭ' | 'ŭ') }
-
-/// Returns `true` if `c` is a sonorant: one of *l m n r*.
-#[inline]
-pub const fn is_sonorant(c: char) -> bool { matches!(c, 'l' | 'm' | 'n' | 'r') }
-
-/// Returns `true` if `c` is a vowel: *a e i o u y*.
-#[inline]
-pub const fn is_vowel(c: char) -> bool { matches!(c, 'a' | 'e' | 'i' | 'o' | 'u' | 'y') }
-
-/// Returns `true` if `c` is a diphthong: *ai ei oi au*.
-#[inline]
-pub const fn is_diphthong(s: &str) -> bool { matches!(s.as_bytes(), b"ai" | b"ei" | b"oi" | b"au") }
-
-/*
-/// Returns `true` if `s` is a single vowel (other than *y*) or a diphthong. As
-/// standalone syllables, these always require a glottal stop before them.
-#[inline]
-pub fn is_start_vowel_cluster(s: &str) -> bool {
-    match s.as_bytes() {
-        [b] => *b != b'y' && is_vowel(*b as char),
-        _ => is_diphthong(s),
-    }
-}
-
-/// Returns `true` if `s` is a syllable nucleus starting with a glide.
-#[inline]
-pub fn is_follow_vowel_cluster(s: &str) -> bool {
-    matches!(s.chars().next(), Some('i' | 'u')) && is_start_vowel_cluster(&s[1..])
-}
-*/
-
-/// Returns `true` if `s` is a lujvo hyphen, used to prevent cmavo-shaped rafsi
+/// Returns whether `s` is a lujvo hyphen, used to prevent cmavo-shaped rafsi
 /// from falling off the start of a lujvo and to delimit zi'evla inside a lujvo.
 #[inline]
+#[must_use]
 pub const fn is_hyphen(s: &str) -> bool {
     matches!(s.as_bytes(), b"r" | b"n" | b"y" | b"'y" | b"y'" | b"'y'")
 }

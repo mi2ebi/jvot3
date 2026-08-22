@@ -1,7 +1,7 @@
 # License Information
 
-jvot3 is licensed under the MIT License. It is partially based
-on the following projects, also available under the MIT License.
+jvot3 is licensed under the MIT License. It is partially based on the
+following projects, also available under the MIT License.
 
 **p-lujvo** (https://codeberg.org/tb148/p-lujvo) \
 Author: Toni Brown (https://codeberg.org/tb148) \

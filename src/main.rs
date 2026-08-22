@@ -1,58 +1,100 @@
-use std::time::{Duration, Instant};
+use std::io::{Write as _, stdout};
 
-use jvot3::prewords::syllabify;
+use flower_pot::{BOLD, BRIGHT_CYAN as CYAN, BRIGHT_RED as RED, RESET};
+use jvot3::{
+    settings::{
+        HyphenSetting::{AllowY, ForceY, Standard},
+        Settings,
+    },
+    units::unitify,
+};
+use rustyline::{DefaultEditor, error::ReadlineError};
 
-fn avg(i: &str) -> Duration {
-    let mut total = Duration::ZERO;
-    let r = 3;
-    for _ in 0..r {
-        let start = Instant::now();
-        let _ = syllabify(i);
-        total += start.elapsed();
+mod cli_docs;
+use crate::cli_docs::{BYE, EMPTY_INPUT_HINT, NO_FN_HINT, TUI_DOCS, UNKNOWN_FN_HINT};
+
+fn settings_label(settings: Settings) -> String {
+    let mut parts = vec![];
+    // todo phonology
+    // todo rafsi
+    match settings.hyphens {
+        Standard => {}
+        AllowY => parts.push("allow-y"),
+        ForceY => parts.push("force-y"),
     }
-    total / r
+    if settings.generate_cmevla {
+        parts.push("generate-cmevla");
+    }
+    if settings.arbitrary_cmavo_rafsi {
+        parts.push("arbitrary-cmavo-rafsi");
+    }
+    if settings.allow_mz {
+        parts.push("allow-mz");
+    }
+    if settings.no_slinkuhi {
+        parts.push("no-slinku'i");
+    }
+    parts.join(" ")
 }
-const TARGET: Duration = Duration::from_secs(1);
-fn find(p: &str, n: &str) {
-    println!("\x1b[1m{n}:\x1b[m");
-    let mut low = 0_usize;
-    let mut high = 1_usize;
-    loop {
-        let input = p.repeat(high);
-        let avg = avg(&input);
-        println!(
-            "[exp] n {high:8}, len {:8}, avg {:8.3}ms",
-            input.len(),
-            avg.as_secs_f32() * 1000.
-        );
-        if avg > TARGET {
-            break;
-        }
-        low = high;
-        high *= 2;
-    }
-    while low + 1 < high {
-        let mid = low.midpoint(high);
-        let input = p.repeat(mid);
-        let avg = avg(&input);
-        println!("[bin] n {mid:8}, len {:8}, avg {:8.3}ms", input.len(), avg.as_secs_f32() * 1000.);
-        if avg > TARGET {
-            high = mid;
-        } else {
-            low = mid;
-        }
+
+fn build_prompt(settings: Settings) -> String {
+    let label = settings_label(settings);
+    if label.is_empty() {
+        format!("\n{RESET}{CYAN}>{RESET} {BOLD}")
+    } else {
+        format!("\n{RESET}{CYAN}[{label}]{RESET}\n{CYAN}>{RESET} {BOLD}")
     }
 }
 
 fn main() {
-    /*
-    easy       7.22 MB/s
-    hard       4.01 MB/s
-    less hard  6.67 MB/s
-    catgirl    7.54 MB/s
-     */
-    find("ua", "easy mode");
-    find("xazdmru", "hard mode");
-    find("xazblblblblblblblblblblna", "less hard mode");
-    find("uu", "catgirl mode");
+    let mut rl = DefaultEditor::new().expect("failed to create line editor");
+    let settings = Settings::CLL;
+    loop {
+        let prompt = build_prompt(settings);
+        match rl.readline(&prompt) {
+            Ok(input) => {
+                print!("{RESET}");
+                stdout().flush().unwrap();
+                rl.add_history_entry(input.as_str()).ok();
+                let rest = input.trim();
+                if rest.is_empty() {
+                    println!("{}", *EMPTY_INPUT_HINT);
+                    continue;
+                }
+                let Some(after_colon) = rest.strip_prefix(':') else {
+                    println!("{}", *NO_FN_HINT);
+                    continue;
+                };
+                let (fun, arg) =
+                    after_colon.split_once(char::is_whitespace).unwrap_or((after_colon, ""));
+                let arg = arg.trim();
+                match fun {
+                    "q" => {
+                        println!("{}", *BYE);
+                        break;
+                    }
+                    "h" => println!("{}", *TUI_DOCS),
+                    "units" => match unitify(arg, settings) {
+                        Ok(us) => {
+                            print!("{}: ", us.len());
+                            for u in us {
+                                print!("{u:?} ");
+                            }
+                            println!();
+                        }
+                        Err(e) => println!("{RED}{e}{RESET}"),
+                    },
+                    _ => println!("{}", *UNKNOWN_FN_HINT),
+                }
+            }
+            Err(ReadlineError::Interrupted | ReadlineError::Eof) => {
+                println!("{}", *BYE);
+                break;
+            }
+            Err(e) => {
+                println!("{RESET}{RED}readline error: {e}{RESET}");
+                break;
+            }
+        }
+    }
 }

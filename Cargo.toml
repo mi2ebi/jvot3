@@ -14,16 +14,9 @@ categories = ["text-processing", "parser-implementations", "command-line-utiliti
 # path = "src/main.rs"
 
 [dependencies]
+bimap = "0.6.3"
+flower-pot = "0.1.9"
 # fancy-regex = "0.18.0"
 itertools = "0.15.0"
-
-[dev-dependencies]
-const_format = { version = "0.2.36", features = ["assertcp"] }
-criterion = { version = "0.8.2", features = ["html_reports"] }
-
-[[bench]]
-name = "syllabify"
-harness = false
-[[bench]]
-name = "is_some_cmavo"
-harness = false
+rustyline = "18.0.1"
+thiserror = "2.0.19"
