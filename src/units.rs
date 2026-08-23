@@ -524,16 +524,7 @@ fn resolve_stress_and_split(
             units.extend(rest);
             break;
         }
-        // if let Some(cmavo_start) = (0 ..= stress_idx).rev().find(|&i| {
-        //     is_cmavo_sequence(&seg[i ..], &cmavo_tail_lens[start + i .. start +
-        // seg_len], settings) }) {
-        //     let mut prefix = resolve_stress_and_split(&seg[.. cmavo_start],
-        // settings)?;     let suffix = seg[cmavo_start
-        // ..].iter().copied().collect();     prefix.push(Unit::Normal {
-        // syllables: suffix, pre_brivla_start: None });
-        //     units.extend(prefix);
-        //     break;
-        // }
+        // hell
         for r in 2 .. seg_len {
             if seg[r - 1].coda.is_none()
                 && !seg[r - 1].nucleus.is_stressed()
