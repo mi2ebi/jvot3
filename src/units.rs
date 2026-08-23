@@ -155,13 +155,13 @@ fn split_into_coda_and_consonantal(
 /// itself qualify.
 fn cmavo_tail_lengths(syllables: &[Syllable]) -> Vec<usize> {
     let n = syllables.len();
-    let mut run = vec![0_usize; n];
+    let mut out = vec![0_usize; n];
     for i in (0 .. n).rev() {
         if syllables[i].could_continue_cmavo() {
-            run[i] = 1 + run.get(i + 1).copied().unwrap_or(0);
+            out[i] = 1 + out.get(i + 1).copied().unwrap_or(0);
         }
     }
-    run
+    out
 }
 
 /// Tries to consume a single cmavo starting at `syllables[i]` and return
@@ -173,14 +173,6 @@ fn try_one_cmavo(syllables: &[Syllable], cmavo_tail_lens: &[usize], i: usize) ->
     }
     let tail = cmavo_tail_lens.get(i + 1).copied().unwrap_or(0);
     Some(i + 1 + tail)
-}
-
-/// Returns whether there's a cmavo starting at `syllables[i]` that ends in a
-/// *y* nucleus.
-#[inline]
-fn cmavo_at_ends_in_y(syllables: &[Syllable], cmavo_tail_lens: &[usize], i: usize) -> bool {
-    try_one_cmavo(syllables, cmavo_tail_lens, i)
-        .is_some_and(|end| matches!(syllables[end - 1].nucleus, Y))
 }
 
 /// Returns whether a cmavo may immediately follow a *y*-ending cmavo
@@ -248,12 +240,14 @@ fn is_cmavo_sequence(
     boundaries.last().copied() == Some(syllables.len())
 }
 
-fn last_cmavo_start(syllables: &VecDeque<Syllable>) -> usize {
-    let mut i = syllables.len().saturating_sub(1);
-    while i > 0 && syllables[i].could_continue_cmavo() {
-        i -= 1;
+/// Returns, for each index `i`, the start of the cmavo `syllables[i]`
+/// belongs to, if any.
+fn cmavo_starts(syllables: &[Syllable]) -> Vec<usize> {
+    let mut start = Vec::with_capacity(syllables.len());
+    for i in 0 .. syllables.len() {
+        start.push(if i > 0 && syllables[i].could_continue_cmavo() { start[i - 1] } else { i });
     }
-    i
+    start
 }
 
 // - precomputing stuff: hard consonants -
@@ -301,11 +295,21 @@ fn next_stressable_after(syllables: &[Syllable]) -> Vec<usize> {
 // - precomputing stuff: brivla evidence -
 
 /// Precomputes the leftmost brivla evidence target for every start position.
-fn evidence_target_from(syllables: &[Syllable], cmavo_tail_lens: &[usize]) -> Vec<Option<usize>> {
+fn evidence_target_from(
+    syllables: &[Syllable],
+    cmavo_tail_lens: &[usize],
+    settings: Settings,
+) -> Vec<Option<usize>> {
     let n = syllables.len();
+    let cmavo_starts = cmavo_starts(syllables);
     let nucleus_evidence = |i: usize| {
-        matches!(syllables[i].nucleus, Y) && !cmavo_at_ends_in_y(syllables, cmavo_tail_lens, i + 1)
-            || matches!(syllables[i].nucleus, Sonorant(_))
+        matches!(syllables[i].nucleus, Sonorant(_))
+            || matches!(syllables[i].nucleus, Y) && i + 1 < n && {
+                let pos = cmavo_starts[i];
+                let end = i + 1;
+                let next_end = try_one_cmavo(syllables, cmavo_tail_lens, end);
+                !cmavo_continuation_permitted_after_y(syllables, pos, end, next_end, settings)
+            }
     };
     let periphery_evidence =
         |i: usize| syllables[i].coda.is_some() || syllables[i].onset.hard_consonant_count() >= 2;
@@ -381,7 +385,7 @@ fn resolve_stress_and_split(
     let hc_prefix = hard_consonant_prefix_sums(syllables);
     let hc_rel = |start: usize, rel: usize| hc_prefix[start + rel] - hc_prefix[start];
     let next_stressable = next_stressable_after(syllables);
-    let evidence_targets = evidence_target_from(syllables, &cmavo_tail_lens);
+    let evidence_targets = evidence_target_from(syllables, &cmavo_tail_lens, settings);
     // scan time
     let mut units = Vec::new();
     let mut start = 0;
@@ -567,8 +571,9 @@ fn try_merging_units(l: &Unit, mut r: Unit, settings: Settings) -> Result<Unit, 
         return Err(r);
     }
     if matches!(l_last.nucleus, Y) {
-        let start = last_cmavo_start(l_syl);
-        let mut window: Vec<Syllable> = l_syl.iter().skip(start).copied().collect();
+        let l_vec: Vec<Syllable> = l_syl.iter().copied().collect();
+        let start = cmavo_starts(&l_vec)[l_vec.len() - 1];
+        let mut window: Vec<Syllable> = l_vec[start ..].to_vec();
         let end = window.len();
         let r_prefix_end = if r_first.could_start_cmavo() {
             let mut i = 1;

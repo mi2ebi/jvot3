@@ -20,6 +20,7 @@ use crate::{
 // todo organize these
 
 const CLL: Settings = Settings::CLL;
+const PERMISSIVE: Settings = Settings::PERMISSIVE;
 
 macro_rules! syllable {
     ($onset:literal, $nucleus:literal) => {
@@ -183,7 +184,7 @@ fn selojbonávahehyjboklu() {
                     syllable!("jb", "ó"),
                     syllable!("kl", "u")
                 ],
-                pre_brivla_start: Some(1)
+                pre_brivla_start: Some(4)
             },
         ])
     );
@@ -593,4 +594,46 @@ fn blahi() {
 fn íafak() {
     // non cmevla results in "{ía} is not a valid nucleus" instead
     assert_eq!(unitify("íafak", CLL), Err(StressOnUnstressable("í".into())));
+}
+
+#[test]
+fn gy() {
+    assert_eq!(
+        unitify("gy", CLL),
+        Ok(vec![Normal { syllables: vdq![syllable!("g", "y")], pre_brivla_start: None }])
+    );
+}
+#[test]
+fn jegy() {
+    assert_eq!(
+        unitify("jegy", CLL),
+        Ok(vec![Normal {
+            syllables: vdq![syllable!("j", "e"), syllable!("g", "y")],
+            pre_brivla_start: None
+        }])
+    );
+}
+#[test]
+fn gyje() {
+    assert_eq!(unitify("gyje", CLL), Err(UnstressablePreBrivlaStart("gy".into())));
+}
+#[test]
+fn pahyva_cll() {
+    assert_eq!(
+        unitify("pa'yva", CLL),
+        Ok(vec![Normal {
+            syllables: vdq![syllable!("p", "a"), syllable!("'", "y"), syllable!("v", "a")],
+            pre_brivla_start: None
+        }])
+    );
+}
+#[test]
+fn pahyva_permissive() {
+    assert_eq!(
+        unitify("pa'yva", PERMISSIVE),
+        Ok(vec![Normal {
+            syllables: vdq![syllable!("p", "á"), syllable!("'", "y"), syllable!("v", "a")],
+            pre_brivla_start: Some(0)
+        }])
+    );
 }
