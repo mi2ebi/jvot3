@@ -177,11 +177,11 @@ fn try_one_cmavo(syllables: &[Syllable], cmavo_tail_lens: &[usize], i: usize) ->
 
 /// Returns whether a cmavo may immediately follow a *y*-ending cmavo
 /// without an intervening pause.
-fn cmavo_continuation_permitted_after_y(
+fn cmavo_permitted_after_y(
     syllables: &[Syllable],
+    cmavo_tail_lens: &[usize],
     pos: usize,
     end: usize,
-    next_end: Option<usize>,
     settings: Settings,
 ) -> bool {
     let settings = extract_settings!(settings; arbitrary_cmavo_rafsi);
@@ -195,7 +195,7 @@ fn cmavo_continuation_permitted_after_y(
     if !(settings.arbitrary_cmavo_rafsi || is_cy_shaped) {
         return true;
     }
-    let Some(next_end) = next_end else { return false };
+    let Some(next_end) = try_one_cmavo(syllables, cmavo_tail_lens, end) else { return false };
     matches!(syllables[next_end - 1].nucleus, Y)
 }
 
@@ -215,7 +215,7 @@ fn cmavo_boundaries_from(
         let Some(end) = end else { break };
         if end < start + len && matches!(syllables[end - 1].nucleus, Y) {
             let next_end = try_one_cmavo(syllables, cmavo_tail_lens, end);
-            if !cmavo_continuation_permitted_after_y(syllables, pos, end, next_end, settings) {
+            if !cmavo_permitted_after_y(syllables, cmavo_tail_lens, pos, end, settings) {
                 break;
             }
             cached_next = Some(next_end);
@@ -307,8 +307,7 @@ fn evidence_target_from(
             || matches!(syllables[i].nucleus, Y) && i + 1 < n && {
                 let pos = cmavo_starts[i];
                 let end = i + 1;
-                let next_end = try_one_cmavo(syllables, cmavo_tail_lens, end);
-                !cmavo_continuation_permitted_after_y(syllables, pos, end, next_end, settings)
+                !cmavo_permitted_after_y(syllables, cmavo_tail_lens, pos, end, settings)
             }
     };
     let periphery_evidence =
@@ -524,18 +523,6 @@ fn resolve_stress_and_split(
             units.extend(rest);
             break;
         }
-        // hell
-        for r in 2 .. seg_len {
-            if seg[r - 1].coda.is_none()
-                && !seg[r - 1].nucleus.is_stressed()
-                && !seg[r].has_h_onset()
-                && let Ok(mut prefix) = resolve_stress_and_split(&seg[.. r], settings)
-                && let Ok(suffix) = resolve_stress_and_split(&seg[r ..], settings)
-            {
-                prefix.extend(suffix);
-                return Ok(prefix);
-            }
-        }
         return Err(InvalidStressPosition(seg[stress_idx].to_string()));
     }
     Ok(units)
@@ -543,7 +530,7 @@ fn resolve_stress_and_split(
 
 // - merging units -
 
-/// Tries to merge `l` into `r`.
+/// Tries to merge `l` into `r`. Returns `Err(r)` if it can't.
 fn try_merging_units(l: &Unit, mut r: Unit, settings: Settings) -> Result<Unit, Unit> {
     let Unit::Normal { syllables: l_syl, pre_brivla_start: None } = l else {
         return Err(r);
@@ -566,18 +553,9 @@ fn try_merging_units(l: &Unit, mut r: Unit, settings: Settings) -> Result<Unit, 
         let start = cmavo_starts(&l_vec)[l_vec.len() - 1];
         let mut window: Vec<Syllable> = l_vec[start ..].to_vec();
         let end = window.len();
-        let r_prefix_end = if r_first.could_start_cmavo() {
-            let mut i = 1;
-            while r_syl.get(i).is_some_and(Syllable::could_continue_cmavo) {
-                i += 1;
-            }
-            i
-        } else {
-            0
-        };
-        window.extend(r_syl.iter().take(r_prefix_end).copied());
-        let next_end = (r_prefix_end > 0).then_some(end + r_prefix_end);
-        if !cmavo_continuation_permitted_after_y(&window, 0, end, next_end, settings) {
+        window.extend(r_syl.iter().copied());
+        let cmavo_tail_lens = cmavo_tail_lengths(&window);
+        if !cmavo_permitted_after_y(&window, &cmavo_tail_lens, 0, end, settings) {
             return Err(r);
         }
     }

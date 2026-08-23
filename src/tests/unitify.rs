@@ -134,16 +134,7 @@ fn sélojbonai() {
 }
 #[test]
 fn selojbonái() {
-    assert_eq!(
-        unitify("selojbonái", CLL),
-        Ok(vec![
-            Normal {
-                syllables: vdq![syllable!("s", "e"), syllable!("l", "ó"), syllable!("jb", "o")],
-                pre_brivla_start: Some(1)
-            },
-            Normal { syllables: vdq![syllable!("n", "ái")], pre_brivla_start: None }
-        ])
-    );
+    assert_eq!(unitify("selojbonái", CLL), Err(InvalidStressPosition("nái".into())));
 }
 #[test]
 fn lójbosélojbonai() {
@@ -163,29 +154,6 @@ fn lójbosélojbonai() {
                 ],
                 pre_brivla_start: Some(2)
             }
-        ])
-    );
-}
-#[test]
-fn selojbonávahehyjboklu() {
-    assert_eq!(
-        unitify("selojbonáva'e'yjboklu", CLL),
-        Ok(vec![
-            Normal {
-                syllables: vdq![syllable!("s", "e"), syllable!("l", "ó"), syllable!("jb", "o")],
-                pre_brivla_start: Some(1)
-            },
-            Normal {
-                syllables: vdq![
-                    syllable!("n", "á"),
-                    syllable!("v", "a"),
-                    syllable!("'", "e"),
-                    syllable!("'", "y"),
-                    syllable!("jb", "ó"),
-                    syllable!("kl", "u")
-                ],
-                pre_brivla_start: Some(4)
-            },
         ])
     );
 }
@@ -617,6 +585,7 @@ fn jegy() {
 fn gyje() {
     assert_eq!(unitify("gyje", CLL), Err(UnstressablePreBrivlaStart("gy".into())));
 }
+
 #[test]
 fn pahyva_cll() {
     assert_eq!(
