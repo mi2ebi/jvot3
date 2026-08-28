@@ -4,7 +4,7 @@ use std::fmt::{self, Display, Formatter};
 
 use crate::{
     jvofli::{
-        Jvofli::{self, Invalid, StressOnUnstressable},
+        Jvofli::{self, Invalid, Unstressable},
         What,
     },
     phonology::{
@@ -116,8 +116,7 @@ impl Nucleus {
     ///
     /// # Errors
     /// - [`Invalid`] with [`What::Nucleus`] if `s` is not a valid nucleus.
-    /// - [`StressOnUnstressable`] if `s` has explicit stress on *y* or a
-    ///   sonorant.
+    /// - [`Unstressable`] if `s` has explicit stress on *y* or a sonorant.
     pub fn new(s: &str) -> Result<Self, Jvofli> {
         let mut raw = s.chars();
         let Some(first) = raw.next() else {
@@ -130,10 +129,10 @@ impl Nucleus {
         }
         match (first, second, stressed) {
             ('y', None, false) => Ok(Y),
-            ('y', None, true) => Err(StressOnUnstressable(s.into())),
+            ('y', None, true) => Err(Unstressable(first.to_string())),
             (c, None, st) if is_vowel(c) => Ok(StressableMonophthong { vowel: c, stressed: st }),
             (c, None, false) if is_sonorant(c) => Ok(Sonorant(c)),
-            (c, None, true) if is_sonorant(c) => Err(StressOnUnstressable(s.into())),
+            (c, None, true) if is_sonorant(c) => Err(Unstressable(first.to_string())),
             (a, Some(b), st) if is_diphthong_chars(a, b) => {
                 Ok(Diphthong { first: a, second: b, stressed: st })
             }

@@ -56,8 +56,8 @@ pub enum Jvofli {
     OnglideInCluster(char),
     #[error("{{{0}}} is a slinku'i")]
     Slinkuhi(String),
-    #[error("{{{0}}} has explicit stress but isn't stressable")]
-    StressOnUnstressable(String),
+    #[error("{{{0}}} isn't stressable")]
+    Unstressable(String),
     #[error("{{{0}}} is at the start of a pre-brivla but it isn't stressable")]
     UnstressablePreBrivlaStart(String),
     #[error("{{{0}}} is at the end of a pre-brivla but it isn't stressable")]

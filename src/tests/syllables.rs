@@ -1,6 +1,6 @@
 use crate::{
     jvofli::{
-        Jvofli::{Invalid, StressOnUnstressable},
+        Jvofli::{Invalid, Unstressable},
         What,
     },
     syllables::{
@@ -69,7 +69,7 @@ fn nucleus_y() {
 }
 #[test]
 fn nucleus_ý() {
-    assert_eq!(Nucleus::new("ý"), Err(StressOnUnstressable("ý".into())));
+    assert_eq!(Nucleus::new("ý"), Err(Unstressable("y".into())));
 }
 
 #[test]

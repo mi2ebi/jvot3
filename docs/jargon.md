@@ -34,7 +34,9 @@ characters:
 | offglide    | *ĭ*         | *ŭ*         |
 | monophthong | *i*         | *u*         |
 
-Annotation is done by `prewords::mark_glides`.
+Annotation is done by `units::annotate_glides` and is only used
+internally for cmevla (for non-cmevla, glides are handled without
+annotating them being necessary).
 
 ## Phonological terms
 

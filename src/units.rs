@@ -15,8 +15,8 @@ use crate::{
     jvofli::{
         Jvofli::{
             self, Invalid, InvalidStressPosition, LongGlide, MisplacedApostrophe,
-            NonLojbanCharacter, NotEnoughSyllables, OnglideInCluster, Slinkuhi,
-            StressOnUnstressable, UnstressablePreBrivlaEnd, UnstressablePreBrivlaStart,
+            NonLojbanCharacter, NotEnoughSyllables, OnglideInCluster, Slinkuhi, Unstressable,
+            UnstressablePreBrivlaEnd, UnstressablePreBrivlaStart,
         },
         What, invalid_cluster_from_triple, invalid_from_pair,
     },
@@ -474,7 +474,6 @@ fn resolve_stress_and_split(
             vec![]
         };
         let mut ptr = r_candidates.len();
-        let cmavo_stress_err = None;
         let mut split_at = None;
         for (_, &l) in boundaries.iter().enumerate().rev() {
             if l > stress_idx || l > evidence_target {
@@ -499,9 +498,6 @@ fn resolve_stress_and_split(
             });
             start += r;
             continue;
-        }
-        if let Some(e) = cmavo_stress_err {
-            return Err(e);
         }
         if stress_idx < default_start
             && is_cmavo_sequence(
@@ -594,7 +590,7 @@ fn annotate_glides(input: &str) -> Result<String, Jvofli> {
         let next_is_vowel = chars.get(i + 1).is_some_and(|&n| is_vowel(n));
         if next_is_vowel {
             if stressed {
-                return Err(StressOnUnstressable(c.to_string()));
+                return Err(Unstressable(base.to_string()));
             }
             chars[i] = on;
             continue;
@@ -606,7 +602,7 @@ fn annotate_glides(input: &str) -> Result<String, Jvofli> {
         if prev_is_diphthong_first {
             if is_diphthong_chars(chars[i - 1], c) {
                 if stressed {
-                    return Err(StressOnUnstressable(c.to_string()));
+                    return Err(Unstressable(base.to_string()));
                 }
                 chars[i] = off;
                 if chars.get(i + 1) == Some(&on) {

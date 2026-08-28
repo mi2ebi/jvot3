@@ -4,8 +4,8 @@ use crate::{
     jvofli::{
         Jvofli::{
             Invalid, InvalidStressPosition, MisplacedApostrophe, NonLojbanCharacter,
-            NotEnoughSyllables, OnglideInCluster, Slinkuhi, StressOnUnstressable,
-            UnstressablePreBrivlaEnd, UnstressablePreBrivlaStart,
+            NotEnoughSyllables, OnglideInCluster, Slinkuhi, Unstressable, UnstressablePreBrivlaEnd,
+            UnstressablePreBrivlaStart,
         },
         What,
     },
@@ -561,7 +561,7 @@ fn blahi() {
 #[test]
 fn íafak() {
     // non cmevla results in "{ía} is not a valid nucleus" instead
-    assert_eq!(unitify("íafak", CLL), Err(StressOnUnstressable("í".into())));
+    assert_eq!(unitify("íafak", CLL), Err(Unstressable("i".into())));
 }
 
 #[test]
@@ -605,4 +605,57 @@ fn pahyva_permissive() {
             pre_brivla_start: Some(0)
         }])
     );
+}
+#[test]
+fn pahyvalsi_cll() {
+    assert_eq!(
+        unitify("pa'yvalsi", CLL),
+        Ok(vec![Normal {
+            syllables: vdq![
+                syllable!("p", "a"),
+                syllable!("'", "y"),
+                syllable!("v", "á", 'l'),
+                syllable!("s", "i")
+            ],
+            pre_brivla_start: Some(2)
+        }])
+    );
+}
+#[test]
+fn pahyvalsi_permissive() {
+    assert_eq!(
+        unitify("pa'yvalsi", PERMISSIVE),
+        Ok(vec![Normal {
+            syllables: vdq![
+                syllable!("p", "a"),
+                syllable!("'", "y"),
+                syllable!("v", "á", 'l'),
+                syllable!("s", "i")
+            ],
+            pre_brivla_start: Some(0)
+        }])
+    );
+}
+#[test]
+fn pahy_valsi_cll() {
+    assert_eq!(unitify("pa'y valsi", CLL), unitify("pa'yvalsi", CLL));
+}
+#[test]
+fn pahy_valsi_permissive() {
+    assert_ne!(unitify("pa'y valsi", PERMISSIVE), unitify("pa'yvalsi", PERMISSIVE));
+}
+
+#[test]
+fn gy_pabroda() {
+    assert_eq!(
+        unitify("gy pabroda", CLL),
+        Ok(vec![Normal { syllables: vdq![syllable!("g", "y")], pre_brivla_start: None }, Normal {
+            syllables: vdq![syllable!("p", "a"), syllable!("br", "ó"), syllable!("d", "a")],
+            pre_brivla_start: Some(1)
+        }])
+    );
+}
+#[test]
+fn gy_gybroda() {
+    assert_eq!(unitify("gy gybroda", CLL), unitify("gygybroda", CLL));
 }
