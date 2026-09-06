@@ -243,28 +243,14 @@ pub struct Syllable {
 }
 
 impl Syllable {
-    #[must_use]
-    /// Returns whether the nucleus is a [`Sonorant`].
-    pub const fn is_consonantal(&self) -> bool { self.nucleus.is_consonantal() }
-
     /// Counts hard consonants in this syllable.
     #[inline]
     #[must_use]
     pub const fn hard_consonant_count(&self) -> usize {
         self.onset.hard_consonant_count()
-            + self.is_consonantal() as usize
+            + self.nucleus.is_consonantal() as usize
             + self.coda.is_some() as usize
     }
-
-    /// Returns whether this syllable's onset is [`H`].
-    #[inline]
-    #[must_use]
-    pub const fn has_h_onset(&self) -> bool { matches!(self.onset, H) }
-
-    /// Returns whether this syllable's onset is [`Empty`].
-    #[inline]
-    #[must_use]
-    pub const fn has_empty_onset(&self) -> bool { matches!(self.onset, Empty) }
 
     /// Returns whether this syllable is a monosyllabic cmavo.
     #[inline]
@@ -278,7 +264,7 @@ impl Syllable {
     /// started.
     #[inline]
     pub(crate) const fn could_continue_cmavo(&self) -> bool {
-        self.has_h_onset() && self.coda.is_none() && self.nucleus.is_vocalic()
+        self.onset.is_h() && self.coda.is_none() && self.nucleus.is_vocalic()
     }
 }
 

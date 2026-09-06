@@ -105,7 +105,7 @@ gismu rafsi.
 **Hyphen**: One of *r n y 'y y' 'y'* when used to delimit rafsi. The
 first two are used to prevent tosmabru, the last four are used at
 zi'evla boundaries, and *y* is also used between invalid consonant
-clusters.
+clusters. A **y hyphen** is any hyphen containing the letter *y*.
 
 **Cmevla**: A name word, anything that ends in a consonant. In spoken
 Lojban these are mandatorily surrounded by *denpa bu*.
@@ -160,6 +160,28 @@ y cmavo.
 Onset and coda evidence may also be called **periphery evidence** (as
 *periphery* = syllable - nucleus), and syllables with either of them
 may be called **blocking** (as they don't pass evidence leftward).
+
+### Rafsi shapes
+
+Describes the phonological form of a rafsi, and determines how it can
+interact with neighboring rafsi in a lujvo. The shapes recognized by
+jvot3 are
+
+- **nice**: CCV. These are nice because they never require a hyphen
+  after them if a CLL rafsi comes after.
+- **prefix**: CVC. These might require a *y* hyphen after them
+  depending on what follows.
+- **end**: CF or CV'V. Despite the name, these can occur anywhere in a
+  lujvo. At the start of a lujvo a hyphen will probably be needed
+  after. The choice of hyphen is determined by `Settings`.
+- **truncated**: a brivla with its final vowel removed. For gismu
+  these have traditionally been called **4-letter rafsi**. Almost
+  every zi'evla can get a truncated rafsi, except if it (1) ends in a
+  diphthong or 'V [e.g. *tcekitaujau*, *bange'e'e*], or (2) would
+  become a cmejvo [e.g. *tokpona*].
+- **complete**: an unmodified brivla.
+- **cmavo**: a cmavo, besides end rafsi. Like zi'evla rafsi, the only
+  hyphen choice for these is a *y* hyphen.
 
 ## Brivla failure modes
 

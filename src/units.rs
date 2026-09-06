@@ -312,7 +312,7 @@ fn evidence_target_from(
     };
     let periphery_evidence =
         |i: usize| syllables[i].coda.is_some() || syllables[i].onset.hard_consonant_count() >= 2;
-    let passes_evidence = |i: usize| syllables[i].has_h_onset() || nucleus_evidence(i);
+    let passes_evidence = |i: usize| syllables[i].onset.is_h() || nucleus_evidence(i);
     let mut prev_blocker = vec![None; n];
     let mut last = None;
     for (i, item) in prev_blocker.iter_mut().enumerate().take(n) {
@@ -406,7 +406,7 @@ fn resolve_stress_and_split(
         let default_start_search = boundaries.iter().copied().enumerate().rev().find(|&(_, l)| {
             l <= evidence_target
                 && seg_len - l >= 2
-                && !seg[l].has_h_onset()
+                && !seg[l].onset.is_h()
                 && seg[l].nucleus.is_stressable()
         });
         let Some((default_idx, default_start)) = default_start_search else {
@@ -415,7 +415,7 @@ fn resolve_stress_and_split(
         let is_ccvhv = seg_len - default_start == 2
             && matches!(seg[default_start].onset, Pair(_))
             && seg[default_start].coda.is_none()
-            && seg[default_start + 1].has_h_onset()
+            && seg[default_start + 1].onset.is_h()
             && seg[default_start + 1].coda.is_none();
         let default_start = if is_ccvhv {
             match default_idx.checked_sub(1) {
@@ -466,7 +466,7 @@ fn resolve_stress_and_split(
             (r_lo ..= r_hi)
                 .filter(|&r| {
                     seg[r - 1].coda.is_none()
-                        && seg.get(r).is_none_or(|s| !s.has_h_onset())
+                        && seg.get(r).is_none_or(|s| !s.onset.is_h())
                         && (stress_idx + 1 .. r).all(|j| !seg[j].nucleus.is_stressed())
                 })
                 .collect()
@@ -535,7 +535,7 @@ fn try_merging_units(l: &Unit, mut r: Unit, settings: Settings) -> Result<Unit, 
         return Err(r);
     };
     let Some(r_first) = r_syl.front().copied() else { return Err(r) };
-    if r_first.has_empty_onset() {
+    if r_first.onset.is_empty() {
         return Err(r);
     }
     let Some(l_last) = l_syl.back().copied() else { return Err(r) };
@@ -892,7 +892,7 @@ impl<'a> Unitifier<'a> {
         let mut syllables = std::mem::take(&mut self.pending_unit);
         syllables.reverse();
         if let Some(first) = syllables.first()
-            && first.has_h_onset()
+            && first.onset.is_h()
         {
             return Err(MisplacedApostrophe {
                 before: None,

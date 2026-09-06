@@ -11,9 +11,9 @@ pub enum HyphenSetting {
     ForceY,
 }
 
-use HyphenSetting::{AllowY, ForceY, Standard};
+use HyphenSetting::{AllowY, Standard};
 
-#[allow(clippy::struct_excessive_bools, reason = "there isn't a Settings::new()")]
+#[expect(clippy::struct_excessive_bools, reason = "there isn't a Settings::new()")]
 #[derive(Clone, Copy, Debug)]
 /// The settings!
 pub struct Settings {
@@ -28,14 +28,14 @@ pub struct Settings {
     pub arbitrary_cmavo_rafsi: bool,
     /// Whether *mz* is considered a valid consonant cluster.
     pub allow_mz: bool,
-    /// Whether slinku'i are valid words. If `true` it considers e.g.
-    /// *paslinku'i* to be a tosmabru.
+    /// Whether slinku'i are valid words. If so e.g. *paslinku'i* is considered
+    /// a tosmabru.
     pub no_slinkuhi: bool,
 }
 
 impl Settings {
-    /// Settings that are as close as possible to the CLL. Putting zi'evla in
-    /// lujvo at all is still allowed.
+    /// Settings that are as close as possible to CLL. Putting zi'evla in lujvo
+    /// at all is still allowed.
     pub const CLL: Self = Self {
         generate_cmevla: false,
         hyphens: Standard,
@@ -43,39 +43,9 @@ impl Settings {
         allow_mz: false,
         no_slinkuhi: false,
     };
-    /// Settings that permit as many lujvo as possible (`Arz`).
+    /// Settings that permit as many lujvo as possible.
     pub const PERMISSIVE: Self =
         Self { hyphens: AllowY, arbitrary_cmavo_rafsi: true, allow_mz: true, ..Self::CLL };
-
-    const fn is_settings_char(c: char) -> bool {
-        matches!(c, 'x' | 'c' | 'S' | 'A' | 'F' | 'r' | 'z' | 'n')
-    }
-
-    /// Modifies `self` by toggling each character in `flags`.
-    pub fn apply_flags(&mut self, flags: &str) -> Option<()> {
-        macro_rules! toggle {
-            ($field:ident, $on:ident) => {
-                self.$field = if self.$field == $on { Settings::CLL.$field } else { $on }
-            };
-        }
-        if flags.chars().any(|c| !Self::is_settings_char(c)) {
-            return None;
-        }
-        for f in flags.chars() {
-            match f {
-                'x' => *self = Self::CLL,
-                'c' => self.generate_cmevla ^= true,
-                'r' => self.arbitrary_cmavo_rafsi ^= true,
-                'z' => self.allow_mz ^= true,
-                'n' => self.no_slinkuhi ^= true,
-                'A' => toggle!(hyphens, AllowY),
-                'F' => toggle!(hyphens, ForceY),
-                'S' => self.hyphens = Standard,
-                _ => return None,
-            }
-        }
-        Some(())
-    }
 }
 
 /// Constructs a new `Settings` from an existing one, but with the fields not

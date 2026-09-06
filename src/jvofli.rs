@@ -4,6 +4,8 @@ use std::fmt::{self, Debug, Display};
 
 use thiserror::Error;
 
+use crate::rafsi::Shape;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(missing_docs, reason = "obvious")]
 #[non_exhaustive]
@@ -19,7 +21,7 @@ pub enum What {
 
 impl Display for What {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use What::{Cluster, ConsonantRun, ConsonantalSyllable, Diphthong, Nucleus, Onset};
+        #[allow(clippy::enum_glob_use, reason = "no silly named wildcards")] use What::*;
         match self {
             Cluster => write!(f, "cluster"),
             ConsonantRun => write!(f, "consonant run"),
@@ -27,6 +29,7 @@ impl Display for What {
             Diphthong => write!(f, "diphthong"),
             Nucleus => write!(f, "nucleus"),
             Onset => write!(f, "onset"),
+            Rafsi => write!(f, "rafsi"),
         }
     }
 }
@@ -42,6 +45,8 @@ pub enum Jvofli {
     InvalidStressPosition(String),
     #[error("{{{0}}} may not be doubled when representing a glide both times")]
     LongGlide(char),
+    #[error("{{{0}}} is a long rafsi, which can't be assigned arbitrarily")]
+    LongRafsiAssignment(String),
     #[error(
         "{{'}} must be between two vowels, but has {} before it and {} after it",
         before.as_ref().map_or_else(|| "nothing".into(), |c| format!("{{{c}}}")),
@@ -54,6 +59,8 @@ pub enum Jvofli {
     NotEnoughSyllables(String),
     #[error("{{{0}}} as an onglide can't be adjacent to consonants")]
     OnglideInCluster(char),
+    #[error("{{{word}}} already has a {shape} rafsi")]
+    RafsiShapeTaken { word: String, shape: Shape },
     #[error("{{{0}}} is a slinku'i")]
     Slinkuhi(String),
     #[error("{{{0}}} isn't stressable")]

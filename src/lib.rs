@@ -14,7 +14,7 @@
 
 pub mod jvofli;
 pub mod phonology;
-// pub mod rafsi;
+pub mod rafsi;
 pub mod settings;
 pub mod syllables;
 #[cfg(test)] mod tests;
