@@ -11,6 +11,7 @@ use crate::{
         add_stress_accent, could_be_glide, is_diphthong_chars, is_hard_consonant, is_hard_onset,
         is_sonorant, is_vowel, strip_stress_accent,
     },
+    settings::Settings,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -35,7 +36,7 @@ impl Onset {
     ///
     /// # Errors
     /// Returns [`Invalid`] with [`What::Onset`] if `s` is not a valid onset.
-    pub fn new(s: &str) -> Result<Self, Jvofli> {
+    pub fn new(s: &str, settings: Settings) -> Result<Self, Jvofli> {
         if s.len() > 3 {
             return Err(Invalid { what: What::Onset, value: s.into() });
         }
@@ -54,7 +55,7 @@ impl Onset {
         if len == 1 && could_be_glide(chars[0]) {
             return Ok(Onglide(chars[0]));
         }
-        if !is_hard_onset(s) {
+        if !is_hard_onset(s, settings) {
             return Err(Invalid { what: What::Onset, value: s.into() });
         }
         match chars {

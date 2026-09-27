@@ -226,20 +226,6 @@ fn cmavo_boundaries_from(
     boundaries
 }
 
-/// Returns whether `syllables` is a valid cmavo sequence.
-fn is_cmavo_sequence(
-    syllables: &[Syllable],
-    cmavo_tail_lens: &[usize],
-    settings: Settings,
-) -> bool {
-    if syllables.is_empty() {
-        return true;
-    }
-    let boundaries =
-        cmavo_boundaries_from(syllables, cmavo_tail_lens, settings, 0, syllables.len());
-    boundaries.last().copied() == Some(syllables.len())
-}
-
 /// Returns, for each index `i`, the start of the cmavo `syllables[i]`
 /// belongs to, if any.
 fn cmavo_starts(syllables: &[Syllable]) -> Vec<usize> {
@@ -277,17 +263,6 @@ fn nearest_stressable_at_or_before(syllables: &[Syllable]) -> Vec<Option<usize>>
             last = Some(i);
         }
         out.push(last);
-    }
-    out
-}
-
-/// For each index `i`, returns the nearest stressable syllable strictly after
-/// `i`, or `n` if none exists.
-fn next_stressable_after(syllables: &[Syllable]) -> Vec<usize> {
-    let n = syllables.len();
-    let mut out = vec![n; n];
-    for i in (0 .. n.saturating_sub(1)).rev() {
-        out[i] = if syllables[i + 1].nucleus.is_stressable() { i + 1 } else { out[i + 1] };
     }
     out
 }
@@ -349,6 +324,22 @@ fn evidence_target_from(
 
 // - grouping syllables -
 
+/// Prepends a deferred cmavo prefix to the first unit produced from a suffix.
+fn prepend_deferred_prefix(unit: &mut Unit, prefix: &mut VecDeque<Syllable>) {
+    if prefix.is_empty() {
+        return;
+    }
+    let Unit::Normal { syllables, pre_brivla_start } = unit else {
+        unreachable!("[pdp] rs&s never produces cmevla for a deferred cmavo prefix")
+    };
+    let prefix_len = prefix.len();
+    for &s in prefix.iter().rev() {
+        syllables.push_front(s);
+    }
+    *pre_brivla_start = Some(pre_brivla_start.unwrap_or(0) + prefix_len);
+    prefix.clear();
+}
+
 /// Tries to split `syllables` into multiple units using stress locations.
 fn resolve_stress_and_split(
     syllables: &[Syllable],
@@ -360,7 +351,7 @@ fn resolve_stress_and_split(
     }
     // precompute a bunch of stuff
     let cmavo_tail_lens = cmavo_tail_lengths(syllables);
-    let boundaries = cmavo_boundaries_from(syllables, &cmavo_tail_lens, settings, 0, n);
+    let mut boundaries = cmavo_boundaries_from(syllables, &cmavo_tail_lens, settings, 0, n);
     if boundaries.last().copied() == Some(n) {
         // early exit if only cmavo
         return Ok(vec![Unit::Normal {
@@ -377,24 +368,37 @@ fn resolve_stress_and_split(
             .and_then(|j| (j >= start).then(|| j - start))
     };
     let mut next_explicit_stress = vec![None; n + 1];
+    let mut next_stressable = vec![n; n + 1];
+    let mut next_explicit = None;
+    let mut next_stressable_idx = n;
     for i in (0 .. n).rev() {
-        next_explicit_stress[i] =
-            if syllables[i].nucleus.is_stressed() { Some(i) } else { next_explicit_stress[i + 1] };
+        if syllables[i].nucleus.is_stressed() {
+            next_explicit = Some(i);
+        }
+        next_explicit_stress[i] = next_explicit;
+        next_stressable[i] = next_stressable_idx;
+        if syllables[i].nucleus.is_stressable() {
+            next_stressable_idx = i;
+        }
     }
     let hc_prefix = hard_consonant_prefix_sums(syllables);
     let hc_rel = |start: usize, rel: usize| hc_prefix[start + rel] - hc_prefix[start];
-    let next_stressable = next_stressable_after(syllables);
     let evidence_targets = evidence_target_from(syllables, &cmavo_tail_lens, settings);
     // scan time
     let mut units = Vec::new();
+    let mut deferred_prefix = VecDeque::new();
     let mut start = 0;
     while start < n {
+        if start != 0 {
+            boundaries =
+                cmavo_boundaries_from(syllables, &cmavo_tail_lens, settings, start, n - start);
+        }
         let seg = &syllables[start ..];
         let seg_len = seg.len();
-        let boundaries =
-            cmavo_boundaries_from(syllables, &cmavo_tail_lens, settings, start, seg_len);
         if boundaries.last().copied() == Some(seg_len) {
-            units.push(Unit::Normal { syllables: seg.to_vec().into(), pre_brivla_start: None });
+            let mut unit = Unit::Normal { syllables: seg.to_vec().into(), pre_brivla_start: None };
+            prepend_deferred_prefix(&mut unit, &mut deferred_prefix);
+            units.push(unit);
             break;
         }
         let evidence_target = evidence_targets[start]
@@ -446,17 +450,19 @@ fn resolve_stress_and_split(
             let mut syllables_vec: VecDeque<_> =
                 syllables[start .. start + seg_len].to_vec().into();
             syllables_vec[natural].nucleus.set_stressed(true);
-            units.push(Unit::Normal {
-                syllables: syllables_vec,
-                pre_brivla_start: Some(default_start),
-            });
+            let mut unit =
+                Unit::Normal { syllables: syllables_vec, pre_brivla_start: Some(default_start) };
+            prepend_deferred_prefix(&mut unit, &mut deferred_prefix);
+            units.push(unit);
             break;
         };
         if natural_stress == Some(stress_idx) {
-            units.push(Unit::Normal {
+            let mut unit = Unit::Normal {
                 syllables: seg.to_vec().into(),
                 pre_brivla_start: Some(default_start),
-            });
+            };
+            prepend_deferred_prefix(&mut unit, &mut deferred_prefix);
+            units.push(unit);
             break;
         }
         let stress_idx_abs = start + stress_idx;
@@ -492,32 +498,18 @@ fn resolve_stress_and_split(
             if !seg[r - 1].nucleus.is_stressable() {
                 return Err(UnstressablePreBrivlaEnd(seg[r - 1].to_string()));
             }
-            units.push(Unit::Normal {
-                syllables: seg[.. r].to_vec().into(),
-                pre_brivla_start: Some(l),
-            });
+            let mut unit =
+                Unit::Normal { syllables: seg[.. r].to_vec().into(), pre_brivla_start: Some(l) };
+            prepend_deferred_prefix(&mut unit, &mut deferred_prefix);
+            units.push(unit);
             start += r;
             continue;
         }
-        if stress_idx < default_start
-            && is_cmavo_sequence(
-                &seg[.. default_start],
-                &cmavo_tail_lens[start .. start + default_start],
-                settings,
-            )
-        {
-            let mut rest = resolve_stress_and_split(&seg[default_start ..], settings)?;
-            let Some(Unit::Normal { syllables, pre_brivla_start }) = rest.first_mut() else {
-                unreachable!(
-                    "[rs&s] resolve_stress_and_split never produces no units or any cmevla"
-                )
-            };
-            for &s in seg[.. default_start].iter().rev() {
-                syllables.push_front(s);
-            }
-            *pre_brivla_start = Some(pre_brivla_start.unwrap_or(0) + default_start);
-            units.extend(rest);
-            break;
+        if stress_idx < default_start {
+            // we know everything before the pre-brivla start is a cmavo prefix
+            deferred_prefix.extend(seg[.. default_start].iter().copied());
+            start += default_start;
+            continue;
         }
         return Err(InvalidStressPosition(seg[stress_idx].to_string()));
     }
@@ -667,10 +659,8 @@ fn check_cmevla(pg: &str, settings: Settings) -> Result<(), Jvofli> {
 
 struct Unitifier<'a> {
     input: &'a str,
-    /// Remaining chars of `input`.
-    chars: Rev<CharIndices<'a>>,
-    /// Completed units, pushed rtl.
-    units: Vec<Unit>,
+    chars: Rev<CharIndices<'a>>, // remaining chars of `input`
+    units: Vec<Unit>,            // completed units (rtl)
     settings: Settings,
     pg_end: usize,
     in_cmevla: bool,
@@ -754,7 +744,7 @@ impl<'a> Unitifier<'a> {
             let onset_chars: Vec<char> =
                 self.pending_consonants[.. suffix_len].iter().rev().copied().collect();
             let onset_str: String = onset_chars.iter().collect();
-            if let Err(e) = Onset::new(&onset_str) {
+            if let Err(e) = Onset::new(&onset_str, self.settings) {
                 let leftover = &self.pending_consonants[suffix_len ..];
                 if split_into_coda_and_consonantal(leftover, may_try_coda).is_ok() {
                     best_err.get_or_insert(e);
@@ -789,7 +779,7 @@ impl<'a> Unitifier<'a> {
                 });
                 continue;
             }
-            let onset = Onset::new(&onset_str)?;
+            let onset = Onset::new(&onset_str, self.settings)?;
             let new_coda = coda;
             self.consonantal_syllable_buffer.clear();
             self.consonantal_syllable_buffer.extend(pairs.into_iter().rev());

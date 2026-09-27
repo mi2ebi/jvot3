@@ -3,6 +3,7 @@ use crate::{
         Jvofli::{Invalid, Unstressable},
         What,
     },
+    settings::Settings,
     syllables::{
         Coda,
         Nucleus::{self, Diphthong, Sonorant, StressableMonophthong, Y},
@@ -10,33 +11,35 @@ use crate::{
     },
 };
 
+const CLL: Settings = Settings::CLL;
+
 #[test]
 fn onset_b() {
-    assert_eq!(Onset::new("b"), Ok(Single('b')));
+    assert_eq!(Onset::new("b", CLL), Ok(Single('b')));
 }
 #[test]
 fn onset_bl() {
-    assert_eq!(Onset::new("bl"), Ok(Pair(['b', 'l'])));
+    assert_eq!(Onset::new("bl", CLL), Ok(Pair(['b', 'l'])));
 }
 #[test]
 fn onset_jvl() {
-    assert_eq!(Onset::new("jvl"), Ok(Triple(['j', 'v', 'l'])));
+    assert_eq!(Onset::new("jvl", CLL), Ok(Triple(['j', 'v', 'l'])));
 }
 #[test]
 fn onset_h() {
-    assert_eq!(Onset::new("'"), Ok(H));
+    assert_eq!(Onset::new("'", CLL), Ok(H));
 }
 #[test]
 fn onset_() {
-    assert_eq!(Onset::new(""), Ok(Empty));
+    assert_eq!(Onset::new("", CLL), Ok(Empty));
 }
 #[test]
 fn onset_u() {
-    assert_eq!(Onset::new("u"), Ok(Onglide('u')));
+    assert_eq!(Onset::new("u", CLL), Ok(Onglide('u')));
 }
 #[test]
 fn onset_bd() {
-    assert_eq!(Onset::new("bd"), Err(Invalid { what: What::Onset, value: "bd".into() }));
+    assert_eq!(Onset::new("bd", CLL), Err(Invalid { what: What::Onset, value: "bd".into() }));
 }
 
 #[test]

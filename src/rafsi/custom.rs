@@ -5,9 +5,11 @@ use std::collections::HashMap;
 use crate::{
     jvofli::Jvofli::{self, LongRafsiAssignment, RafsiShapeTaken},
     rafsi::{
-        Shape::{Cmavo, Complete, Truncated},
+        Shape::{ArbitraryCmavo, Complete, Truncated},
         classify_rafsi,
     },
+    settings::Settings,
+    words::{Cmavo, Gismu, Zihevla},
 };
 
 #[derive(Debug)]
@@ -16,6 +18,15 @@ use crate::{
 pub struct Rafste {
     by_rafsi: HashMap<String, String>,
     by_word: HashMap<String, Vec<String>>,
+}
+
+#[derive(Debug, Clone)]
+#[allow(missing_docs, reason = "wrappers")]
+/// Wrapper type for things that can have rafsi.
+pub enum Selrafsi {
+    Gismu(Gismu),
+    Cmavo(Cmavo),
+    Zihevla(Zihevla),
 }
 
 impl Rafste {
@@ -32,15 +43,19 @@ impl Rafste {
     ///
     /// If `rafsi` is a long rafsi, or `word` already has a rafsi of the same
     /// shape.
-    pub fn assign(&mut self, rafsi: &str, word: &str) -> Result<Option<String>, Jvofli> {
-        let shape = classify_rafsi(rafsi, None);
-        if matches!(shape, Complete | Truncated | Cmavo) {
+    pub fn assign(
+        &mut self,
+        rafsi: &str,
+        word: &str,
+        settings: Settings,
+    ) -> Result<Option<String>, Jvofli> {
+        let shape = classify_rafsi(rafsi, None, settings);
+        if matches!(shape, Complete | Truncated | ArbitraryCmavo) {
             return Err(LongRafsiAssignment(rafsi.to_string()));
         }
-        if self
-            .marafsi(word)
-            .is_some_and(|rs| rs.iter().any(|r| *r != rafsi && classify_rafsi(r, None) == shape))
-        {
+        if self.marafsi(word).is_some_and(|rs| {
+            rs.iter().any(|r| *r != rafsi && classify_rafsi(r, None, settings) == shape)
+        }) {
             return Err(RafsiShapeTaken { word: word.to_string(), shape });
         }
         Ok(self.assign_unchecked(rafsi, word))

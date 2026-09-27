@@ -12,9 +12,11 @@ use crate::rafsi::Shape;
 /// Answers questions of the form "invalid what?" etc.
 pub enum What {
     Cluster,
+    Cmavo,
     ConsonantRun,
     ConsonantalSyllable,
     Diphthong,
+    Gismu,
     Nucleus,
     Onset,
 }
@@ -29,7 +31,8 @@ impl Display for What {
             Diphthong => write!(f, "diphthong"),
             Nucleus => write!(f, "nucleus"),
             Onset => write!(f, "onset"),
-            Rafsi => write!(f, "rafsi"),
+            Cmavo => write!(f, "cmavo"),
+            Gismu => write!(f, "gismu"),
         }
     }
 }

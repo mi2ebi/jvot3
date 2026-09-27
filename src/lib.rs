@@ -19,3 +19,4 @@ pub mod settings;
 pub mod syllables;
 #[cfg(test)] mod tests;
 pub mod units;
+pub mod words;

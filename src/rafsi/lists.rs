@@ -2047,7 +2047,7 @@ impl Rafste {
         r.remove("cin");
         r.assign_unchecked("cka", "ckaji");
         r.remove("coi");
-        r.remove("co'i");
+        r.assign_unchecked("co'i", "corci");
         r.assign_unchecked("cok", "tcoka");
         r.remove("col");
         r.assign_unchecked("con", "conka");
@@ -2088,9 +2088,11 @@ impl Rafste {
         r.remove("jgo");
         r.remove("jol");
         r.remove("jo'o");
+        r.remove("jom");
         r.remove("jor");
         r.assign_unchecked("ju'a", "jukpa");
         r.remove("jub");
+        r.remove("jve");
         r.remove("ke'e");
         r.remove("keb");
         r.remove("ked");
@@ -2101,19 +2103,23 @@ impl Rafste {
         r.remove("kez");
         r.assign_unchecked("kil", "kilto");
         r.assign_unchecked("kom", "kosmu");
+        r.remove("kuz");
         r.remove("la'o");
         r.remove("lap");
         r.assign_unchecked("lal", "laldo");
         r.assign_unchecked("lan", "lanli");
         r.assign_unchecked("la'o", "laldo");
         r.remove("lav");
+        r.remove("lem");
         r.remove("let");
         r.remove("lif");
         r.remove("liz");
         r.assign_unchecked("lo'a", "losxa");
         r.remove("lob");
+        r.remove("lom");
         r.assign_unchecked("los", "losxa");
         r.remove("lo'i");
+        r.remove("lo'o");
         r.remove("lot");
         r.assign_unchecked("lox", "ploxa");
         r.assign_unchecked("lun", "lunra");
@@ -2121,7 +2127,6 @@ impl Rafste {
         r.remove("luv");
         r.remove("mim");
         r.remove("mix");
-        r.assign_unchecked("mun", "mluni");
         r.remove("mob");
         r.remove("moj");
         r.assign_unchecked("mor", "morji");
@@ -2129,17 +2134,20 @@ impl Rafste {
         r.assign_unchecked("mox", "moxna");
         r.remove("muf");
         r.remove("mug");
-        r.remove("mun");
+        r.assign_unchecked("mun", "mluni");
         r.remove("nax");
-        r.remove("naz");
+        r.assign_unchecked("naz", "nabzu");
         r.remove("nix");
         r.remove("no'e");
+        r.assign_unchecked("nu'o", "nulzo");
         r.assign_unchecked("paj", "pajni");
         r.remove("pet");
         r.remove("pic");
         r.remove("pi'o");
         r.remove("pir");
+        r.remove("piv");
         r.assign_unchecked("po'o", "pombo");
+        r.assign_unchecked("pus", "pusli");
         r.remove("pur");
         r.remove("puv");
         r.remove("red");
@@ -2161,11 +2169,14 @@ impl Rafste {
         r.remove("se'o");
         r.assign_unchecked("sev", "sevda");
         r.assign_unchecked("sfo", "nusfo");
+        r.remove("sfu");
         r.remove("sif");
         r.assign_unchecked("si'i", "sicpi");
         r.remove("sme"); // assign_unchecked("sme", "smela"); // tbd
+        r.remove("smo");
         r.remove("soc");
         r.remove("so'i");
+        r.assign_unchecked("sok", "smoka");
         r.remove("su'e");
         r.remove("suf");
         r.remove("su'o");
@@ -2173,10 +2184,12 @@ impl Rafste {
         r.assign_unchecked("taj", "tadji");
         r.remove("tal"); // assign_unchecked("tal", "tavla"); // tbd
         r.remove("tav");
+        r.remove("tif");
         r.remove("to'e");
         r.remove("to'o");
         r.remove("toz");
         // r.remove("tso"); // tbd
+        r.remove("tuf");
         r.remove("tux");
         r.remove("tuz");
         r.remove("va'a");
@@ -2203,6 +2216,7 @@ impl Rafste {
         r.remove("xon");
         r.remove("xoz");
         r.assign_unchecked("xur", "xusra");
+        r.remove("xu'o");
         r.remove("xus");
         r.remove("zam");
         r.remove("zaz");
@@ -2216,5 +2230,15 @@ impl Rafste {
         r.remove("zvi");
         r.remove("zvo");
         r
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn usable() {
+        let _r = Rafste::lensisku();
+        let _r = Rafste::mati();
     }
 }

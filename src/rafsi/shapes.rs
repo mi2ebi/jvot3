@@ -17,7 +17,7 @@ use crate::{
 pub enum Shape {
     /// A cmavo that isn't an `End` rafsi, for `arbitrary_cmavo_rafsi`. Unlike
     /// `End`, these can only be followed by *y* hyphens, not *r*/*n*.
-    Cmavo,
+    ArbitraryCmavo,
     /// A full brivla.
     Complete,
     /// A brivla without its final vowel. For gismu, these are "4-letter" rafsi.
@@ -37,26 +37,28 @@ pub enum Shape {
 impl Display for Shape {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", match self {
-            Cmavo => "cmavo",
+            ArbitraryCmavo => "cmavo",
             Complete => "complete",
             Truncated => "truncated",
             Prefix => "prefix (CVC)",
             Nice => "nice (CCV)",
             End { h } =>
                 if *h {
-                    "hiatus"
+                    "hiatus (CV'V)"
                 } else {
-                    "diphthong"
+                    "diphthong (CF)"
                 },
         })
     }
 }
 
-use Shape::{Cmavo, Complete, End, Nice, Prefix, Truncated};
+use Shape::{ArbitraryCmavo, Complete, End, Nice, Prefix, Truncated};
 
 #[must_use]
-fn is_one_cmavo(text: &str) -> bool {
-    let Ok(units) = unitify(text, Settings::CLL) else {
+/// Returns whether `s` is exactly one cmavo.
+pub fn is_one_cmavo(s: &str) -> bool {
+    // choice of settings doesn't matter here
+    let Ok(units) = unitify(s, Settings::CLL) else {
         return false;
     };
     let [Unit::Normal { syllables, pre_brivla_start: None }] = units.as_slice() else {
@@ -65,8 +67,8 @@ fn is_one_cmavo(text: &str) -> bool {
     syllables.iter().filter(|s| !s.onset.is_h()).nth(1).is_none()
 }
 
-pub(crate) fn classify_rafsi(text: &str, next_char: Option<char>) -> Shape {
-    debug_assert!(text.is_ascii(), "[classify_rafsi] text = {text} has non ascii");
+pub(crate) fn classify_rafsi(text: &str, next_char: Option<char>, settings: Settings) -> Shape {
+    debug_assert!(text.is_ascii(), "[classify_rafsi] {text} has non ascii");
     let elided = next_char == Some('y');
     let bytes = text.as_bytes();
     if let &[b0, b1, b2] = bytes {
@@ -75,7 +77,8 @@ pub(crate) fn classify_rafsi(text: &str, next_char: Option<char>) -> Shape {
         let c2 = b2 as char;
         if is_hard_consonant(c0) {
             if is_hard_consonant(c1) {
-                if is_stressable_vowel(c2) && matches!(Onset::new(&text[.. 2]), Ok(Onset::Pair(_)))
+                if is_stressable_vowel(c2)
+                    && matches!(Onset::new(&text[.. 2], settings), Ok(Onset::Pair(_)))
                 {
                     return Nice;
                 }
@@ -112,7 +115,7 @@ pub(crate) fn classify_rafsi(text: &str, next_char: Option<char>) -> Shape {
         return Truncated;
     }
     if text.chars().filter(|&c| is_hard_consonant(c)).nth(1).is_none() && is_one_cmavo(text) {
-        return Cmavo;
+        return ArbitraryCmavo;
     }
     if !is_stressable_vowel(last as char) {
         return Truncated;
@@ -123,65 +126,67 @@ pub(crate) fn classify_rafsi(text: &str, next_char: Option<char>) -> Shape {
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    const CLL: Settings = Settings::CLL;
     #[test]
     fn nice() {
-        assert_eq!(classify_rafsi("bla", None), Nice, "bla");
-        assert_eq!(classify_rafsi("gri", None), Nice, "gri");
-        assert_eq!(classify_rafsi("sfa", None), Nice, "sfa");
+        assert_eq!(classify_rafsi("bla", None, CLL), Nice, "bla");
+        assert_eq!(classify_rafsi("gri", None, CLL), Nice, "gri");
+        assert_eq!(classify_rafsi("sfa", None, CLL), Nice, "sfa");
     }
     #[test]
     fn end_diphthong() {
-        assert_eq!(classify_rafsi("tei", None), End { h: false }, "tei");
-        assert_eq!(classify_rafsi("lau", None), End { h: false }, "lau");
+        assert_eq!(classify_rafsi("tei", None, CLL), End { h: false }, "tei");
+        assert_eq!(classify_rafsi("lau", None, CLL), End { h: false }, "lau");
     }
     #[test]
     fn end_diphthongh() {
-        assert_eq!(classify_rafsi("tei", Some('\'')), End { h: false }, "tei'");
+        assert_eq!(classify_rafsi("tei", Some('\''), CLL), End { h: false }, "tei'");
+        assert_eq!(classify_rafsi("lau", Some('\''), CLL), End { h: false }, "lau'");
     }
     #[test]
     fn truncated_cvgy() {
         // these should all fail downstream
-        assert_eq!(classify_rafsi("tei", Some('y')), Truncated, "teiy");
-        assert_eq!(classify_rafsi("lau", Some('y')), Truncated, "lauy");
-        assert_eq!(classify_rafsi("peu", Some('y')), Truncated, "peuy");
-        assert_eq!(classify_rafsi("iau", Some('y')), Truncated, "iauy");
-        assert_eq!(classify_rafsi("le", Some('y')), Truncated, "ley");
+        assert_eq!(classify_rafsi("tei", Some('y'), CLL), Truncated, "teiy");
+        assert_eq!(classify_rafsi("lau", Some('y'), CLL), Truncated, "lauy");
+        assert_eq!(classify_rafsi("peu", Some('y'), CLL), Truncated, "peuy");
+        assert_eq!(classify_rafsi("iau", Some('y'), CLL), Truncated, "iauy");
+        assert_eq!(classify_rafsi("le", Some('y'), CLL), Truncated, "ley");
     }
     #[test]
     fn end_hiatus() {
-        assert_eq!(classify_rafsi("te'i", None), End { h: true }, "te'i");
-        assert_eq!(classify_rafsi("la'u", None), End { h: true }, "la'u");
-        assert_eq!(classify_rafsi("pe'u", None), End { h: true }, "pe'u");
+        assert_eq!(classify_rafsi("te'i", None, CLL), End { h: true }, "te'i");
+        assert_eq!(classify_rafsi("la'u", None, CLL), End { h: true }, "la'u");
+        assert_eq!(classify_rafsi("pe'u", None, CLL), End { h: true }, "pe'u");
     }
     #[test]
     fn prefix() {
-        assert_eq!(classify_rafsi("bal", None), Prefix, "bal");
-        assert_eq!(classify_rafsi("lan", None), Prefix, "lan");
+        assert_eq!(classify_rafsi("bal", None, CLL), Prefix, "bal");
+        assert_eq!(classify_rafsi("lan", None, CLL), Prefix, "lan");
     }
     #[test]
     fn truncated() {
-        assert_eq!(classify_rafsi("anj", None), Truncated, "anj");
-        assert_eq!(classify_rafsi("fi'ikc", None), Truncated, "fi'ikc");
-        assert_eq!(classify_rafsi("gism", None), Truncated, "gism");
+        assert_eq!(classify_rafsi("anj", None, CLL), Truncated, "anj");
+        assert_eq!(classify_rafsi("fi'ikc", None, CLL), Truncated, "fi'ikc");
+        assert_eq!(classify_rafsi("gism", None, CLL), Truncated, "gism");
     }
     #[test]
     fn complete() {
-        assert_eq!(classify_rafsi("anji", None), Complete, "anji");
-        assert_eq!(classify_rafsi("fi'ikca", None), Complete, "fi'ikca");
-        assert_eq!(classify_rafsi("gismu", None), Complete, "gismu");
+        assert_eq!(classify_rafsi("anji", None, CLL), Complete, "anji");
+        assert_eq!(classify_rafsi("fi'ikca", None, CLL), Complete, "fi'ikca");
+        assert_eq!(classify_rafsi("gismu", None, CLL), Complete, "gismu");
     }
     #[test]
     fn brivla_diphthong() {
-        assert_eq!(classify_rafsi("plukauai", None), Complete, "plauakai");
-        assert_eq!(classify_rafsi("plukauai", Some('\'')), Complete, "plukauai'");
-        assert_eq!(classify_rafsi("plukauai", Some('y')), Truncated, "plukauaiy");
+        assert_eq!(classify_rafsi("plukauai", None, CLL), Complete, "plauakai");
+        assert_eq!(classify_rafsi("plukauai", Some('\''), CLL), Complete, "plukauai'");
+        assert_eq!(classify_rafsi("plukauai", Some('y'), CLL), Truncated, "plukauaiy");
     }
     #[test]
     fn cmavo() {
-        assert_eq!(classify_rafsi("mi", None), Cmavo, "mi");
-        assert_eq!(classify_rafsi("fi'i'e", None), Cmavo, "fi'i'e");
-        assert_eq!(classify_rafsi("te'y", None), Cmavo, "te'y"); // should fail later
-        assert_eq!(classify_rafsi("iau", None), Cmavo, "iau");
+        assert_eq!(classify_rafsi("mi", None, CLL), ArbitraryCmavo, "mi");
+        assert_eq!(classify_rafsi("fi'i'e", None, CLL), ArbitraryCmavo, "fi'i'e");
+        assert_eq!(classify_rafsi("te'y", None, CLL), ArbitraryCmavo, "te'y"); // should fail later
+        assert_eq!(classify_rafsi("iau", None, CLL), ArbitraryCmavo, "iau");
+        assert_eq!(classify_rafsi("iu'a", None, CLL), ArbitraryCmavo, "iu'a");
     }
 }

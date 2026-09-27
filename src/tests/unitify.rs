@@ -23,16 +23,16 @@ const CLL: Settings = Settings::CLL;
 const PERMISSIVE: Settings = Settings::PERMISSIVE;
 
 macro_rules! syllable {
-    ($onset:literal, $nucleus:literal) => {
+    ($onset:literal, $nucleus:literal; $settings:expr) => {
         Syllable {
-            onset: Onset::new($onset).unwrap(),
+            onset: Onset::new($onset, $settings).unwrap(),
             nucleus: Nucleus::new($nucleus).unwrap(),
             coda: None,
         }
     };
-    ($onset:literal, $nucleus:literal, $coda:literal) => {
+    ($onset:literal, $nucleus:literal, $coda:literal; $settings:expr) => {
         Syllable {
-            onset: Onset::new($onset).unwrap(),
+            onset: Onset::new($onset, $settings).unwrap(),
             nucleus: Nucleus::new($nucleus).unwrap(),
             coda: Coda::new($coda),
         }
@@ -49,10 +49,10 @@ fn lehigerku() {
         unitify("le'igerku", CLL),
         Ok(vec![Normal {
             syllables: vdq![
-                syllable!("l", "e"),
-                syllable!("'", "i"),
-                syllable!("g", "é", 'r'),
-                syllable!("k", "u")
+                syllable!("l", "e"; CLL),
+                syllable!("'", "i"; CLL),
+                syllable!("g", "é", 'r'; CLL),
+                syllable!("k", "u"; CLL)
             ],
             pre_brivla_start: Some(2)
         }])
@@ -64,7 +64,7 @@ fn ianai() {
     assert_eq!(
         unitify("ianai", CLL),
         Ok(vec![Normal {
-            syllables: vdq![syllable!("i", "a"), syllable!("n", "ai")],
+            syllables: vdq![syllable!("i", "a"; CLL), syllable!("n", "ai"; CLL)],
             pre_brivla_start: None
         }])
     );
@@ -75,7 +75,11 @@ fn jehebzi() {
     assert_eq!(
         unitify("je'ebzi", CLL),
         Ok(vec![Normal {
-            syllables: vdq![syllable!("j", "e"), syllable!("'", "é", 'b'), syllable!("z", "i")],
+            syllables: vdq![
+                syllable!("j", "e"; CLL),
+                syllable!("'", "é", 'b'; CLL),
+                syllable!("z", "i"; CLL)
+            ],
             pre_brivla_start: Some(0)
         }])
     );
@@ -87,10 +91,10 @@ fn selojbonai() {
         unitify("selojbonai", CLL),
         Ok(vec![Normal {
             syllables: vdq![
-                syllable!("s", "e"),
-                syllable!("l", "o"),
-                syllable!("jb", "ó"),
-                syllable!("n", "ai")
+                syllable!("s", "e"; CLL),
+                syllable!("l", "o"; CLL),
+                syllable!("jb", "ó"; CLL),
+                syllable!("n", "ai"; CLL)
             ],
             pre_brivla_start: Some(2)
         }])
@@ -110,10 +114,14 @@ fn selójbonai() {
         unitify("selójbonai", CLL),
         Ok(vec![
             Normal {
-                syllables: vdq![syllable!("s", "e"), syllable!("l", "ó"), syllable!("jb", "o")],
+                syllables: vdq![
+                    syllable!("s", "e"; CLL),
+                    syllable!("l", "ó"; CLL),
+                    syllable!("jb", "o"; CLL)
+                ],
                 pre_brivla_start: Some(1)
             },
-            Normal { syllables: vdq![syllable!("n", "ai")], pre_brivla_start: None }
+            Normal { syllables: vdq![syllable!("n", "ai"; CLL)], pre_brivla_start: None }
         ])
     );
 }
@@ -123,10 +131,10 @@ fn sélojbonai() {
         unitify("sélojbonai", CLL),
         Ok(vec![Normal {
             syllables: vdq![
-                syllable!("s", "é"),
-                syllable!("l", "o"),
-                syllable!("jb", "ó"),
-                syllable!("n", "ai")
+                syllable!("s", "é"; CLL),
+                syllable!("l", "o"; CLL),
+                syllable!("jb", "ó"; CLL),
+                syllable!("n", "ai"; CLL)
             ],
             pre_brivla_start: Some(2)
         }])
@@ -142,15 +150,15 @@ fn lójbosélojbonai() {
         unitify("lójbosélojbonai", CLL),
         Ok(vec![
             Normal {
-                syllables: vdq![syllable!("l", "ó"), syllable!("jb", "o")],
+                syllables: vdq![syllable!("l", "ó"; CLL), syllable!("jb", "o"; CLL)],
                 pre_brivla_start: Some(0)
             },
             Normal {
                 syllables: vdq![
-                    syllable!("s", "é"),
-                    syllable!("l", "o"),
-                    syllable!("jb", "ó"),
-                    syllable!("n", "ai")
+                    syllable!("s", "é"; CLL),
+                    syllable!("l", "o"; CLL),
+                    syllable!("jb", "ó"; CLL),
+                    syllable!("n", "ai"; CLL)
                 ],
                 pre_brivla_start: Some(2)
             }
@@ -163,7 +171,11 @@ fn xazdmru() {
     assert_eq!(
         unitify("xazdmru", CLL),
         Ok(vec![Normal {
-            syllables: vdq![syllable!("x", "á", 'z'), syllable!("d", "m"), syllable!("r", "u")],
+            syllables: vdq![
+                syllable!("x", "á", 'z'; CLL),
+                syllable!("d", "m"; CLL),
+                syllable!("r", "u"; CLL)
+            ],
             pre_brivla_start: Some(0)
         }])
     );
@@ -174,7 +186,7 @@ fn mi_do() {
     assert_eq!(
         unitify("mi do", CLL),
         Ok(vec![Normal {
-            syllables: vdq![syllable!("m", "i"), syllable!("d", "o")],
+            syllables: vdq![syllable!("m", "i"; CLL), syllable!("d", "o"; CLL)],
             pre_brivla_start: None
         }])
     );
@@ -199,10 +211,13 @@ fn krtyvla() {
 fn mi_ihe() {
     assert_eq!(
         unitify("mi i'e", CLL),
-        Ok(vec![Normal { syllables: vdq![syllable!("m", "i")], pre_brivla_start: None }, Normal {
-            syllables: vdq![syllable!("", "i"), syllable!("'", "e")],
-            pre_brivla_start: None
-        }])
+        Ok(vec![
+            Normal { syllables: vdq![syllable!("m", "i"; CLL)], pre_brivla_start: None },
+            Normal {
+                syllables: vdq![syllable!("", "i"; CLL), syllable!("'", "e"; CLL)],
+                pre_brivla_start: None
+            }
+        ])
     );
 }
 
@@ -210,10 +225,13 @@ fn mi_ihe() {
 fn ai_iicmo() {
     assert_eq!(
         unitify("ai iicmo", CLL),
-        Ok(vec![Normal { syllables: vdq![syllable!("", "ai")], pre_brivla_start: None }, Normal {
-            syllables: vdq![syllable!("i", "í"), syllable!("cm", "o")],
-            pre_brivla_start: Some(0)
-        }])
+        Ok(vec![
+            Normal { syllables: vdq![syllable!("", "ai"; CLL)], pre_brivla_start: None },
+            Normal {
+                syllables: vdq![syllable!("i", "í"; CLL), syllable!("cm", "o"; CLL)],
+                pre_brivla_start: Some(0)
+            }
+        ])
     );
 }
 
@@ -251,7 +269,7 @@ fn fyha() {
     assert_eq!(
         unitify("fy'a", CLL),
         Ok(vec![Normal {
-            syllables: vdq![syllable!("f", "y"), syllable!("'", "a")],
+            syllables: vdq![syllable!("f", "y"; CLL), syllable!("'", "a"; CLL)],
             pre_brivla_start: None
         }])
     );
@@ -261,7 +279,11 @@ fn fyhahe() {
     assert_eq!(
         unitify("fy'a'e", CLL),
         Ok(vec![Normal {
-            syllables: vdq![syllable!("f", "y"), syllable!("'", "a"), syllable!("'", "e")],
+            syllables: vdq![
+                syllable!("f", "y"; CLL),
+                syllable!("'", "a"; CLL),
+                syllable!("'", "e"; CLL)
+            ],
             pre_brivla_start: None
         }])
     );
@@ -296,10 +318,10 @@ fn pafrtahe() {
         unitify("pafrta'e", CLL),
         Ok(vec![Normal {
             syllables: vdq![
-                syllable!("p", "a"),
-                syllable!("f", "r"),
-                syllable!("t", "á"),
-                syllable!("'", "e")
+                syllable!("p", "a"; CLL),
+                syllable!("f", "r"; CLL),
+                syllable!("t", "á"; CLL),
+                syllable!("'", "e"; CLL)
             ],
             pre_brivla_start: Some(0)
         }])
@@ -311,10 +333,10 @@ fn pafrtable() {
         unitify("pafrtable", CLL),
         Ok(vec![Normal {
             syllables: vdq![
-                syllable!("p", "a"),
-                syllable!("f", "r"),
-                syllable!("t", "á"),
-                syllable!("bl", "e")
+                syllable!("p", "a"; CLL),
+                syllable!("f", "r"; CLL),
+                syllable!("t", "á"; CLL),
+                syllable!("bl", "e"; CLL)
             ],
             pre_brivla_start: Some(0)
         }])
@@ -326,7 +348,11 @@ fn bácrúda() {
     assert_eq!(
         unitify("bácrúda", CLL),
         Ok(vec![Normal {
-            syllables: vdq![syllable!("b", "á"), syllable!("cr", "ú"), syllable!("d", "a")],
+            syllables: vdq![
+                syllable!("b", "á"; CLL),
+                syllable!("cr", "ú"; CLL),
+                syllable!("d", "a"; CLL)
+            ],
             pre_brivla_start: Some(1)
         }])
     );
@@ -337,10 +363,10 @@ fn bácruda() {
         unitify("bácruda", CLL),
         Ok(vec![
             Normal {
-                syllables: vdq![syllable!("b", "á"), syllable!("cr", "u")],
+                syllables: vdq![syllable!("b", "á"; CLL), syllable!("cr", "u"; CLL)],
                 pre_brivla_start: Some(0)
             },
-            Normal { syllables: vdq![syllable!("d", "a")], pre_brivla_start: None }
+            Normal { syllables: vdq![syllable!("d", "a"; CLL)], pre_brivla_start: None }
         ])
     );
 }
@@ -350,11 +376,11 @@ fn bácrudárno() {
         unitify("bácrudárno", CLL),
         Ok(vec![
             Normal {
-                syllables: vdq![syllable!("b", "á"), syllable!("cr", "u")],
+                syllables: vdq![syllable!("b", "á"; CLL), syllable!("cr", "u"; CLL)],
                 pre_brivla_start: Some(0)
             },
             Normal {
-                syllables: vdq![syllable!("d", "á", 'r'), syllable!("n", "o")],
+                syllables: vdq![syllable!("d", "á", 'r'; CLL), syllable!("n", "o"; CLL)],
                 pre_brivla_start: Some(0)
             }
         ])
@@ -373,14 +399,14 @@ fn cícozvátiti() {
         Ok(vec![
             Normal {
                 syllables: vdq![
-                    syllable!("c", "í"),
-                    syllable!("c", "o"),
-                    syllable!("zv", "á"),
-                    syllable!("t", "i")
+                    syllable!("c", "í"; CLL),
+                    syllable!("c", "o"; CLL),
+                    syllable!("zv", "á"; CLL),
+                    syllable!("t", "i"; CLL)
                 ],
                 pre_brivla_start: Some(2)
             },
-            Normal { syllables: vdq![syllable!("t", "i")], pre_brivla_start: None }
+            Normal { syllables: vdq![syllable!("t", "i"; CLL)], pre_brivla_start: None }
         ])
     );
 }
@@ -391,23 +417,23 @@ fn máblanútrocícozvátiti() {
         unitify("máblanútrocícozvátiti", CLL),
         Ok(vec![
             Normal {
-                syllables: vdq![syllable!("m", "á"), syllable!("bl", "a")],
+                syllables: vdq![syllable!("m", "á"; CLL), syllable!("bl", "a"; CLL)],
                 pre_brivla_start: Some(0)
             },
             Normal {
-                syllables: vdq![syllable!("n", "ú"), syllable!("tr", "o")],
+                syllables: vdq![syllable!("n", "ú"; CLL), syllable!("tr", "o"; CLL)],
                 pre_brivla_start: Some(0)
             },
             Normal {
                 syllables: vdq![
-                    syllable!("c", "í"),
-                    syllable!("c", "o"),
-                    syllable!("zv", "á"),
-                    syllable!("t", "i")
+                    syllable!("c", "í"; CLL),
+                    syllable!("c", "o"; CLL),
+                    syllable!("zv", "á"; CLL),
+                    syllable!("t", "i"; CLL)
                 ],
                 pre_brivla_start: Some(2)
             },
-            Normal { syllables: vdq![syllable!("t", "i")], pre_brivla_start: None }
+            Normal { syllables: vdq![syllable!("t", "i"; CLL)], pre_brivla_start: None }
         ])
     );
 }
@@ -416,7 +442,11 @@ fn máblánu() {
     assert_eq!(
         unitify("máblánu", CLL),
         Ok(vec![Normal {
-            syllables: vdq![syllable!("m", "á"), syllable!("bl", "á"), syllable!("n", "u")],
+            syllables: vdq![
+                syllable!("m", "á"; CLL),
+                syllable!("bl", "á"; CLL),
+                syllable!("n", "u"; CLL)
+            ],
             pre_brivla_start: Some(1)
         }])
     );
@@ -428,10 +458,10 @@ fn mablaxekri() {
         unitify("mablaxekri", CLL),
         Ok(vec![Normal {
             syllables: vdq![
-                syllable!("m", "a"),
-                syllable!("bl", "a"),
-                syllable!("x", "é"),
-                syllable!("kr", "i"),
+                syllable!("m", "a"; CLL),
+                syllable!("bl", "a"; CLL),
+                syllable!("x", "é"; CLL),
+                syllable!("kr", "i"; CLL),
             ],
             pre_brivla_start: Some(1)
         }])
@@ -447,11 +477,11 @@ fn máblaxekri() {
         unitify("máblaxekri", CLL),
         Ok(vec![
             Normal {
-                syllables: vdq![syllable!("m", "á"), syllable!("bl", "a")],
+                syllables: vdq![syllable!("m", "á"; CLL), syllable!("bl", "a"; CLL)],
                 pre_brivla_start: Some(0)
             },
             Normal {
-                syllables: vdq![syllable!("x", "é"), syllable!("kr", "i")],
+                syllables: vdq![syllable!("x", "é"; CLL), syllable!("kr", "i"; CLL)],
                 pre_brivla_start: Some(0)
             }
         ])
@@ -462,9 +492,13 @@ fn má_blaxekri() {
     assert_eq!(
         unitify("má blaxekri", CLL),
         Ok(vec![
-            Normal { syllables: vdq![syllable!("m", "á")], pre_brivla_start: None },
+            Normal { syllables: vdq![syllable!("m", "á"; CLL)], pre_brivla_start: None },
             Normal {
-                syllables: vdq![syllable!("bl", "a"), syllable!("x", "é"), syllable!("kr", "i")],
+                syllables: vdq![
+                    syllable!("bl", "a"; CLL),
+                    syllable!("x", "é"; CLL),
+                    syllable!("kr", "i"; CLL)
+                ],
                 pre_brivla_start: Some(0)
             }
         ])
@@ -479,7 +513,7 @@ fn mába() {
     assert_eq!(
         unitify("mába", CLL),
         Ok(vec![Normal {
-            syllables: vdq![syllable!("m", "á"), syllable!("b", "a")],
+            syllables: vdq![syllable!("m", "á"; CLL), syllable!("b", "a"; CLL)],
             pre_brivla_start: None
         }])
     );
@@ -493,7 +527,7 @@ fn mábá() {
     assert_eq!(
         unitify("mábá", CLL),
         Ok(vec![Normal {
-            syllables: vdq![syllable!("m", "á"), syllable!("b", "á")],
+            syllables: vdq![syllable!("m", "á"; CLL), syllable!("b", "á"; CLL)],
             pre_brivla_start: None
         }])
     );
@@ -509,10 +543,10 @@ fn mínelcido() {
         unitify("mínelcido", CLL),
         Ok(vec![Normal {
             syllables: vdq![
-                syllable!("m", "í"),
-                syllable!("n", "e", 'l'),
-                syllable!("c", "í"),
-                syllable!("d", "o"),
+                syllable!("m", "í"; CLL),
+                syllable!("n", "e", 'l'; CLL),
+                syllable!("c", "í"; CLL),
+                syllable!("d", "o"; CLL),
             ],
             pre_brivla_start: Some(1)
         }])
@@ -568,7 +602,7 @@ fn íafak() {
 fn gy() {
     assert_eq!(
         unitify("gy", CLL),
-        Ok(vec![Normal { syllables: vdq![syllable!("g", "y")], pre_brivla_start: None }])
+        Ok(vec![Normal { syllables: vdq![syllable!("g", "y"; CLL)], pre_brivla_start: None }])
     );
 }
 #[test]
@@ -576,7 +610,7 @@ fn jegy() {
     assert_eq!(
         unitify("jegy", CLL),
         Ok(vec![Normal {
-            syllables: vdq![syllable!("j", "e"), syllable!("g", "y")],
+            syllables: vdq![syllable!("j", "e"; CLL), syllable!("g", "y"; CLL)],
             pre_brivla_start: None
         }])
     );
@@ -591,7 +625,11 @@ fn pahyva_cll() {
     assert_eq!(
         unitify("pa'yva", CLL),
         Ok(vec![Normal {
-            syllables: vdq![syllable!("p", "a"), syllable!("'", "y"), syllable!("v", "a")],
+            syllables: vdq![
+                syllable!("p", "a"; CLL),
+                syllable!("'", "y"; CLL),
+                syllable!("v", "a"; CLL)
+            ],
             pre_brivla_start: None
         }])
     );
@@ -601,7 +639,11 @@ fn pahyva_permissive() {
     assert_eq!(
         unitify("pa'yva", PERMISSIVE),
         Ok(vec![Normal {
-            syllables: vdq![syllable!("p", "á"), syllable!("'", "y"), syllable!("v", "a")],
+            syllables: vdq![
+                syllable!("p", "á"; PERMISSIVE),
+                syllable!("'", "y"; PERMISSIVE),
+                syllable!("v", "a"; PERMISSIVE)
+            ],
             pre_brivla_start: Some(0)
         }])
     );
@@ -612,10 +654,10 @@ fn pahyvalsi_cll() {
         unitify("pa'yvalsi", CLL),
         Ok(vec![Normal {
             syllables: vdq![
-                syllable!("p", "a"),
-                syllable!("'", "y"),
-                syllable!("v", "á", 'l'),
-                syllable!("s", "i")
+                syllable!("p", "a"; CLL),
+                syllable!("'", "y"; CLL),
+                syllable!("v", "á", 'l'; CLL),
+                syllable!("s", "i"; CLL)
             ],
             pre_brivla_start: Some(2)
         }])
@@ -627,10 +669,10 @@ fn pahyvalsi_permissive() {
         unitify("pa'yvalsi", PERMISSIVE),
         Ok(vec![Normal {
             syllables: vdq![
-                syllable!("p", "a"),
-                syllable!("'", "y"),
-                syllable!("v", "á", 'l'),
-                syllable!("s", "i")
+                syllable!("p", "a"; PERMISSIVE),
+                syllable!("'", "y"; PERMISSIVE),
+                syllable!("v", "á", 'l'; PERMISSIVE),
+                syllable!("s", "i"; PERMISSIVE)
             ],
             pre_brivla_start: Some(0)
         }])
@@ -649,10 +691,17 @@ fn pahy_valsi_permissive() {
 fn gy_pabroda() {
     assert_eq!(
         unitify("gy pabroda", CLL),
-        Ok(vec![Normal { syllables: vdq![syllable!("g", "y")], pre_brivla_start: None }, Normal {
-            syllables: vdq![syllable!("p", "a"), syllable!("br", "ó"), syllable!("d", "a")],
-            pre_brivla_start: Some(1)
-        }])
+        Ok(vec![
+            Normal { syllables: vdq![syllable!("g", "y"; CLL)], pre_brivla_start: None },
+            Normal {
+                syllables: vdq![
+                    syllable!("p", "a"; CLL),
+                    syllable!("br", "ó"; CLL),
+                    syllable!("d", "a"; CLL)
+                ],
+                pre_brivla_start: Some(1)
+            }
+        ])
     );
 }
 #[test]

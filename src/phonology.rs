@@ -154,6 +154,15 @@ pub fn strip_stress_accent(c: char) -> (char, bool) {
     STRESS.get_by_left(&c).map_or((c, false), |&plain| (plain, true))
 }
 
+#[must_use]
+/// Returns whether `c` is stressed.
+pub fn is_stressed(c: char) -> bool { strip_stress_accent(c).1 }
+
+/// Removes stress marks from everything.
+pub(crate) fn strip_all_stress(s: &str) -> String {
+    s.chars().map(|c| strip_stress_accent(c).0).collect()
+}
+
 /// Adds explicit stress to a vowel.
 pub fn add_stress_accent(c: char) -> Option<char> { STRESS.get_by_right(&c).copied() }
 
@@ -202,12 +211,15 @@ const fn check_pair(x: u8, y: u8, table: &[u32; 25]) -> bool {
 pub const fn is_valid_chars(x: char, y: char, settings: Settings) -> bool {
     let settings = extract_settings!(settings; allow_mz);
     check_pair(x as u8, y as u8, &VALID_TABLE) || settings.allow_mz && x == 'm' && y == 'z'
+    // todo more_configurable clusters
 }
 
 /// Returns whether `x` and `y` form a valid word-initial consonant cluster.
 #[inline]
 #[must_use]
-pub const fn is_initial_chars(x: char, y: char) -> bool {
+pub const fn is_initial_chars(x: char, y: char, settings: Settings) -> bool {
+    #[allow(clippy::no_effect_underscore_binding, reason = "why does this lint exist")]
+    let _settings = extract_settings!(settings; allow_mz); // todo more_configurable clusters
     check_pair(x as u8, y as u8, &INITIAL_TABLE)
 }
 
@@ -215,6 +227,7 @@ pub const fn is_initial_chars(x: char, y: char) -> bool {
 /// by CLL: *ndj ndz ntc nts*.
 #[inline]
 #[must_use]
+// todo(j4tci): customize
 pub const fn is_banned_triple_chars(x: char, y: char, z: char) -> bool {
     x == 'n' && matches!([y, z], ['d', 'j' | 'z'] | ['t', 'c' | 's'])
 }
@@ -223,15 +236,15 @@ pub const fn is_banned_triple_chars(x: char, y: char, z: char) -> bool {
 /// that [`is_hard_consonant`]).
 #[inline]
 #[must_use]
-pub const fn is_hard_onset(s: &str) -> bool {
+pub const fn is_hard_onset(s: &str, settings: Settings) -> bool {
     match *s.as_bytes() {
         [x] => is_in_set(x, ALL),
-        [x, y] => check_pair(x, y, &INITIAL_TABLE),
+        [x, y] => is_initial_chars(x as char, y as char, settings),
         [x, y, z] => {
             is_in_set(x, SIBILANT)
                 && is_in_set(z, LIQUID)
-                && check_pair(x, y, &INITIAL_TABLE)
-                && check_pair(y, z, &INITIAL_TABLE)
+                && is_initial_chars(x as char, y as char, settings)
+                && is_initial_chars(y as char, z as char, settings)
         }
         _ => false,
     }
