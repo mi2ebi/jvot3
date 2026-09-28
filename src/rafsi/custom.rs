@@ -51,7 +51,7 @@ impl Rafste {
         word: &str,
         settings: Settings,
     ) -> Result<Option<String>, Jvofli> {
-        self.check_assignment(rafsi, word, settings)?;
+        Self::check_against(self.marafsi(word).unwrap_or(&[]), rafsi, word, settings)?;
         Ok(self.assign_unchecked(rafsi, word))
     }
 
@@ -68,17 +68,31 @@ impl Rafste {
         old_word
     }
 
-    /// Checks that `rafsi` is a short rafsi and that `word` has no other rafsi
-    /// of the same shape.
-    fn check_assignment(&self, rafsi: &str, word: &str, settings: Settings) -> Result<(), Jvofli> {
-        let shape = classify_rafsi(rafsi, None, settings);
+    /// Checks that `attempted` is a short rafsi and that none of the `earlier`
+    /// rafsi of `word` share its shape.
+    fn check_against(
+        earlier: &[String],
+        attempted: &str,
+        word: &str,
+        settings: Settings,
+    ) -> Result<(), Jvofli> {
+        let shape = classify_rafsi(attempted, None, settings);
         if matches!(shape, Complete | Truncated | ArbitraryCmavo) {
-            return Err(LongRafsiAssignment(rafsi.to_string()));
+            return Err(LongRafsiAssignment {
+                word: word.to_string(),
+                shape,
+                attempted: attempted.to_string(),
+            });
         }
-        if self.marafsi(word).is_some_and(|rs| {
-            rs.iter().any(|r| *r != rafsi && classify_rafsi(r, None, settings) == shape)
-        }) {
-            return Err(RafsiShapeTaken { word: word.to_string(), shape });
+        if let Some(existing) =
+            earlier.iter().find(|r| **r != attempted && classify_rafsi(r, None, settings) == shape)
+        {
+            return Err(RafsiShapeTaken {
+                word: word.to_string(),
+                shape,
+                existing: existing.clone(),
+                attempted: attempted.to_string(),
+            });
         }
         Ok(())
     }
@@ -101,18 +115,21 @@ impl Rafste {
     /// enforces.
     ///
     /// # Errors
-    /// All violations found, in word order.
+    /// All violations found in word order (and within a word, in insertion
+    /// order).
     pub fn validate(&self, settings: Settings) -> Result<(), Vec<Jvofli>> {
-        let mut errors: Vec<Jvofli> = self
+        let errors: Vec<Jvofli> = self
             .by_word
             .iter()
             .sorted_by_key(|(word, _)| *word)
             .flat_map(|(word, rafsi)| {
-                rafsi.iter().map(move |r| self.check_assignment(r, word, settings))
+                rafsi
+                    .iter()
+                    .enumerate()
+                    .map(move |(i, r)| Self::check_against(&rafsi[.. i], r, word, settings))
             })
             .filter_map(Result::err)
             .collect();
-        errors.dedup();
         if errors.is_empty() { Ok(()) } else { Err(errors) }
     }
 

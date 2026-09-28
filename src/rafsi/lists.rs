@@ -2240,7 +2240,10 @@ impl Rafste {
 mod tests {
     use crate::{
         jvofli::Jvofli::{LongRafsiAssignment, RafsiShapeTaken},
-        rafsi::{Rafste, Shape::Prefix},
+        rafsi::{
+            Rafste,
+            Shape::{Prefix, Truncated},
+        },
         settings::Settings,
     };
     const CLL: Settings = Settings::CLL;
@@ -2253,19 +2256,70 @@ mod tests {
         assert_eq!(Rafste::mati().validate(CLL), Ok(()));
     }
     #[test]
-    fn duplicate_shape_invalid() {
+    fn duplicate_shape_mn_invalid() {
         let mut r = Rafste::empty();
         r.assign_unchecked("com", "co'e");
         r.assign_unchecked("con", "co'e");
         assert_eq!(
             r.validate(CLL),
-            Err(vec![RafsiShapeTaken { word: "co'e".into(), shape: Prefix }])
+            Err(vec![RafsiShapeTaken {
+                word: "co'e".into(),
+                shape: Prefix,
+                existing: "com".into(),
+                attempted: "con".into()
+            }])
+        );
+    }
+    #[test]
+    fn duplicate_shape_nm_invalid() {
+        let mut r = Rafste::empty();
+        r.assign_unchecked("con", "co'e");
+        r.assign_unchecked("com", "co'e");
+        assert_eq!(
+            r.validate(CLL),
+            Err(vec![RafsiShapeTaken {
+                word: "co'e".into(),
+                shape: Prefix,
+                existing: "con".into(),
+                attempted: "com".into()
+            }])
+        );
+    }
+    #[test]
+    fn duplicate_shape_mnl_invalid() {
+        let mut r = Rafste::empty();
+        r.assign_unchecked("com", "co'e");
+        r.assign_unchecked("con", "co'e");
+        r.assign_unchecked("col", "co'e");
+        assert_eq!(
+            r.validate(CLL),
+            Err(vec![
+                RafsiShapeTaken {
+                    word: "co'e".into(),
+                    shape: Prefix,
+                    existing: "com".into(),
+                    attempted: "con".into()
+                },
+                RafsiShapeTaken {
+                    word: "co'e".into(),
+                    shape: Prefix,
+                    existing: "com".into(),
+                    attempted: "col".into()
+                }
+            ])
         );
     }
     #[test]
     fn long_rafsi_invalid() {
         let mut r = Rafste::empty();
         r.assign_unchecked("brod", "broda");
-        assert_eq!(r.validate(CLL), Err(vec![LongRafsiAssignment("brod".into())]));
+        assert_eq!(
+            r.validate(CLL),
+            Err(vec![LongRafsiAssignment {
+                word: "broda".into(),
+                shape: Truncated,
+                attempted: "brod".into()
+            }])
+        );
     }
 }

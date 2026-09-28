@@ -38,8 +38,8 @@ impl Display for Shape {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", match self {
             ArbitraryCmavo => "cmavo",
-            Complete => "complete",
-            Truncated => "truncated",
+            Complete => "complete-brivla",
+            Truncated => "truncated-brivla",
             Prefix => "prefix (CVC)",
             Nice => "nice (CCV)",
             End { h } =>
