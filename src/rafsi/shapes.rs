@@ -102,10 +102,7 @@ pub(crate) fn classify_rafsi(text: &str, next_char: Option<char>, settings: Sett
         let c3 = b3 as char;
         if is_hard_consonant(c0) && is_stressable_vowel(c1) && c2 == '\'' && is_stressable_vowel(c3)
         {
-            if elided {
-                return Truncated;
-            }
-            return End { h: true };
+            return if elided { Truncated } else { End { h: true } };
         }
     }
     let Some(&last) = bytes.last() else {

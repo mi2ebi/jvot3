@@ -2,6 +2,8 @@
 
 use std::collections::HashMap;
 
+use itertools::Itertools as _;
+
 use crate::{
     jvofli::Jvofli::{self, LongRafsiAssignment, RafsiShapeTaken},
     rafsi::{
@@ -49,15 +51,7 @@ impl Rafste {
         word: &str,
         settings: Settings,
     ) -> Result<Option<String>, Jvofli> {
-        let shape = classify_rafsi(rafsi, None, settings);
-        if matches!(shape, Complete | Truncated | ArbitraryCmavo) {
-            return Err(LongRafsiAssignment(rafsi.to_string()));
-        }
-        if self.marafsi(word).is_some_and(|rs| {
-            rs.iter().any(|r| *r != rafsi && classify_rafsi(r, None, settings) == shape)
-        }) {
-            return Err(RafsiShapeTaken { word: word.to_string(), shape });
-        }
+        self.check_assignment(rafsi, word, settings)?;
         Ok(self.assign_unchecked(rafsi, word))
     }
 
@@ -74,6 +68,21 @@ impl Rafste {
         old_word
     }
 
+    /// Checks that `rafsi` is a short rafsi and that `word` has no other rafsi
+    /// of the same shape.
+    fn check_assignment(&self, rafsi: &str, word: &str, settings: Settings) -> Result<(), Jvofli> {
+        let shape = classify_rafsi(rafsi, None, settings);
+        if matches!(shape, Complete | Truncated | ArbitraryCmavo) {
+            return Err(LongRafsiAssignment(rafsi.to_string()));
+        }
+        if self.marafsi(word).is_some_and(|rs| {
+            rs.iter().any(|r| *r != rafsi && classify_rafsi(r, None, settings) == shape)
+        }) {
+            return Err(RafsiShapeTaken { word: word.to_string(), shape });
+        }
+        Ok(())
+    }
+
     pub(crate) fn from_words(words: &[(&'static str, &'static [&'static str])]) -> Self {
         let mut by_rafsi = HashMap::new();
         let mut by_word = HashMap::new();
@@ -86,6 +95,25 @@ impl Rafste {
             by_word.insert(word.to_string(), rafsi);
         }
         Self { by_rafsi, by_word }
+    }
+
+    /// Checks every word's rafsi against the same rules [`Rafste::assign`]
+    /// enforces.
+    ///
+    /// # Errors
+    /// All violations found, in word order.
+    pub fn validate(&self, settings: Settings) -> Result<(), Vec<Jvofli>> {
+        let mut errors: Vec<Jvofli> = self
+            .by_word
+            .iter()
+            .sorted_by_key(|(word, _)| *word)
+            .flat_map(|(word, rafsi)| {
+                rafsi.iter().map(move |r| self.check_assignment(r, word, settings))
+            })
+            .filter_map(Result::err)
+            .collect();
+        errors.dedup();
+        if errors.is_empty() { Ok(()) } else { Err(errors) }
     }
 
     /// Removes `rafsi` from any word it's assigned to.

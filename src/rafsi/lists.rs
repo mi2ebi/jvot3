@@ -2041,6 +2041,7 @@ impl Rafste {
         r.assign_unchecked("bam", "bamri");
         r.assign_unchecked("ba'i", "bamri");
         r.assign_unchecked("bek", "bekpi");
+        r.assign_unchecked("bil", "bilma");
         r.remove("bo'e");
         r.remove("bul");
         r.remove("bus");
@@ -2054,7 +2055,7 @@ impl Rafste {
         r.remove("cor");
         r.remove("cox");
         r.remove("cus");
-        r.assign_unchecked("daj", "dajbu");
+        r.remove("daj");
         r.remove("del");
         r.remove("de'o");
         r.assign_unchecked("diz", "dizri");
@@ -2121,6 +2122,7 @@ impl Rafste {
         r.remove("lo'i");
         r.remove("lo'o");
         r.remove("lot");
+        r.remove("lov");
         r.assign_unchecked("lox", "ploxa");
         r.assign_unchecked("lun", "lunra");
         r.remove("lur");
@@ -2154,6 +2156,7 @@ impl Rafste {
         r.remove("rif");
         r.assign_unchecked("rit", "pritu");
         r.remove("rod");
+        r.remove("rom");
         r.remove("rot");
         r.remove("ro'u");
         r.remove("roz");
@@ -2172,7 +2175,7 @@ impl Rafste {
         r.remove("sfu");
         r.remove("sif");
         r.assign_unchecked("si'i", "sicpi");
-        r.remove("sme"); // assign_unchecked("sme", "smela"); // tbd
+        r.assign_unchecked("sme", "smela");
         r.remove("smo");
         r.remove("soc");
         r.remove("so'i");
@@ -2235,10 +2238,34 @@ impl Rafste {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::{
+        jvofli::Jvofli::{LongRafsiAssignment, RafsiShapeTaken},
+        rafsi::{Rafste, Shape::Prefix},
+        settings::Settings,
+    };
+    const CLL: Settings = Settings::CLL;
     #[test]
-    fn usable() {
-        let _r = Rafste::lensisku();
-        let _r = Rafste::mati();
+    fn lensisku_valid() {
+        assert_eq!(Rafste::lensisku().validate(CLL), Ok(()));
+    }
+    #[test]
+    fn mati_valid() {
+        assert_eq!(Rafste::mati().validate(CLL), Ok(()));
+    }
+    #[test]
+    fn duplicate_shape_invalid() {
+        let mut r = Rafste::empty();
+        r.assign_unchecked("com", "co'e");
+        r.assign_unchecked("con", "co'e");
+        assert_eq!(
+            r.validate(CLL),
+            Err(vec![RafsiShapeTaken { word: "co'e".into(), shape: Prefix }])
+        );
+    }
+    #[test]
+    fn long_rafsi_invalid() {
+        let mut r = Rafste::empty();
+        r.assign_unchecked("brod", "broda");
+        assert_eq!(r.validate(CLL), Err(vec![LongRafsiAssignment("brod".into())]));
     }
 }
