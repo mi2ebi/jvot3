@@ -21,8 +21,8 @@ use crate::{
         What, invalid_cluster_from_triple, invalid_from_pair,
     },
     phonology::{
-        deannotate_glide, is_annotated_offglide, is_annotated_onglide, is_banned_triple_chars,
-        is_consonant, is_diphthong_chars, is_hard_consonant, is_sonorant, is_valid_chars, is_vowel,
+        deannotate_glide, is_annotated_offglide, is_annotated_onglide, is_banned_triple,
+        is_consonant, is_diphthong, is_hard_consonant, is_sonorant, is_valid, is_vowel,
         strip_stress_accent,
     },
     settings::Settings,
@@ -592,7 +592,7 @@ fn annotate_glides(input: &str) -> Result<String, Jvofli> {
                 .get(i - 1)
                 .is_some_and(|&p| matches!(p, 'a' | 'á' | 'e' | 'é' | 'o' | 'ó' | 'y' | 'ý'));
         if prev_is_diphthong_first {
-            if is_diphthong_chars(chars[i - 1], c) {
+            if is_diphthong(chars[i - 1], c) {
                 if stressed {
                     return Err(Unstressable(base.to_string()));
                 }
@@ -626,7 +626,7 @@ fn check_cmevla(pg: &str, settings: Settings) -> Result<(), Jvofli> {
         if is_hard_consonant(c)
             && let Some(n) = after
             && is_hard_consonant(n)
-            && !is_valid_chars(c, n, settings)
+            && !is_valid(c, n, settings)
         {
             return Err(invalid_from_pair(What::Cluster, c, n));
         }
@@ -765,14 +765,14 @@ impl<'a> Unitifier<'a> {
                 .or_else(|| coda.map(|c| c.it()));
             if let Some(l) = left_of_onset
                 && let Some(&r) = onset_chars.first()
-                && !is_valid_chars(l, r, self.settings)
+                && !is_valid(l, r, self.settings)
             {
                 best_err.get_or_insert_with(|| invalid_from_pair(What::Cluster, l, r));
                 continue;
             }
             if let Some(pre) = left_of_onset
                 && onset_chars.len() >= 2
-                && is_banned_triple_chars(pre, onset_chars[0], onset_chars[1])
+                && is_banned_triple(pre, onset_chars[0], onset_chars[1])
             {
                 best_err.get_or_insert_with(|| {
                     invalid_cluster_from_triple(pre, onset_chars[0], onset_chars[1])
@@ -826,7 +826,7 @@ impl<'a> Unitifier<'a> {
             return Ok(());
         };
         // diphthong time
-        if is_diphthong_chars(c, existing) {
+        if is_diphthong(c, existing) {
             if let Some(&Syllable { onset: Onglide(g), .. }) = self.pending_unit.last()
                 && g == self.pending_nucleus[0]
             {

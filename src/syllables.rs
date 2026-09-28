@@ -8,7 +8,7 @@ use crate::{
         What,
     },
     phonology::{
-        add_stress_accent, could_be_glide, is_diphthong_chars, is_hard_consonant, is_hard_onset,
+        add_stress_accent, could_be_glide, is_diphthong, is_hard_consonant, is_hard_onset,
         is_sonorant, is_vowel, strip_stress_accent,
     },
     settings::Settings,
@@ -134,7 +134,7 @@ impl Nucleus {
             (c, None, st) if is_vowel(c) => Ok(StressableMonophthong { vowel: c, stressed: st }),
             (c, None, false) if is_sonorant(c) => Ok(Sonorant(c)),
             (c, None, true) if is_sonorant(c) => Err(Unstressable(first.to_string())),
-            (a, Some(b), st) if is_diphthong_chars(a, b) => {
+            (a, Some(b), st) if is_diphthong(a, b) => {
                 Ok(Diphthong { first: a, second: b, stressed: st })
             }
             _ => Err(Invalid { what: What::Nucleus, value: s.into() }),

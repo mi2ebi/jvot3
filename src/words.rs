@@ -6,8 +6,7 @@ use crate::{
         What,
     },
     phonology::{
-        is_hard_consonant, is_initial_chars, is_stressable_vowel, is_stressed, is_valid_chars,
-        strip_all_stress,
+        is_hard_consonant, is_initial, is_stressable_vowel, is_stressed, is_valid, strip_all_stress,
     },
     rafsi::is_one_cmavo,
     settings::Settings,
@@ -31,10 +30,10 @@ impl Gismu {
                 is_hard_consonant(a)
                     && (is_hard_consonant(b)
                         && is_stressable_vowel(c)
-                        && is_initial_chars(a, b, settings)
+                        && is_initial(a, b, settings)
                         || is_stressable_vowel(b)
                             && is_hard_consonant(c)
-                            && is_valid_chars(c, d, settings))
+                            && is_valid(c, d, settings))
                     && is_hard_consonant(d)
                     && is_stressable_vowel(e)
                     && !is_stressed(e)

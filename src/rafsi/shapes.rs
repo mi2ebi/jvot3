@@ -3,7 +3,7 @@
 use std::fmt::Display;
 
 use crate::{
-    phonology::{is_diphthong_chars, is_hard_consonant, is_stressable_vowel},
+    phonology::{is_diphthong, is_hard_consonant, is_stressable_vowel},
     settings::Settings,
     syllables::Onset,
     units::{Unit, unitify},
@@ -86,7 +86,7 @@ pub(crate) fn classify_rafsi(text: &str, next_char: Option<char>, settings: Sett
                 if is_hard_consonant(c2) {
                     return Prefix;
                 }
-                if is_diphthong_chars(c1, c2) {
+                if is_diphthong(c1, c2) {
                     if elided {
                         return Truncated;
                     }

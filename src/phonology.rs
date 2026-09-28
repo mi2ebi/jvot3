@@ -108,7 +108,7 @@ pub const fn is_vowel(c: char) -> bool { is_stressable_vowel(c) || c == 'y' || c
 /// Returns whether `x` and `y` form a diphthong: *ai au ei oi*.
 #[inline]
 #[must_use]
-pub const fn is_diphthong_chars(x: char, y: char) -> bool {
+pub const fn is_diphthong(x: char, y: char) -> bool {
     matches!([x, y], ['a' | 'á' | 'e' | 'é' | 'o' | 'ó', 'i'] | ['a' | 'á', 'u'])
 }
 
@@ -171,17 +171,17 @@ pub fn add_stress_accent(c: char) -> Option<char> { STRESS.get_by_right(&c).copi
 /// Returns whether `c` is in the given bitset, where bit `i` corresponds to
 /// the letter `b'b' + i`.
 #[inline]
-const fn is_in_set(c: u8, set: u32) -> bool {
-    let idx = (c as u32).wrapping_sub(b'b' as u32);
+const fn is_in_set(c: u32, set: u32) -> bool {
+    let idx = c.wrapping_sub(b'b' as u32);
     idx < 25 && (set >> idx) & 1 != 0
 }
 
 /// Returns whether `c` is a consonant, *excluding* apostrophe.
 #[inline]
 #[must_use]
-pub const fn is_hard_consonant(c: char) -> bool { is_in_set(c as u8, ALL) }
+pub const fn is_hard_consonant(c: char) -> bool { is_in_set(c as u32, ALL) }
 
-/// Returns whether `c` is a consonant, *including* apsotrophe.
+/// Returns whether `c` is a consonant, *including* apostrophe.
 #[inline]
 #[must_use]
 pub const fn is_consonant(c: char) -> bool { is_hard_consonant(c) || c == '\'' }
@@ -189,15 +189,15 @@ pub const fn is_consonant(c: char) -> bool { is_hard_consonant(c) || c == '\'' }
 /// Returns whether `c` is one of *l m n r*.
 #[inline]
 #[must_use]
-pub const fn is_sonorant(c: char) -> bool { is_in_set(c as u8, SONORANT) }
+pub const fn is_sonorant(c: char) -> bool { is_in_set(c as u32, SONORANT) }
 
 // - clusters -
 
-/// Returns whether the byte pair `(x, y)` is allowed by `table`.
+/// Returns whether the pair of letters `(x, y)` is allowed by `table`.
 #[inline]
-const fn check_pair(x: u8, y: u8, table: &[u32; 25]) -> bool {
-    let xi = x.wrapping_sub(b'b') as usize;
-    let yi = y.wrapping_sub(b'b') as usize;
+const fn check_pair(x: u32, y: u32, table: &[u32; 25]) -> bool {
+    let xi = x.wrapping_sub(b'b' as u32) as usize;
+    let yi = y.wrapping_sub(b'b' as u32) as usize;
     if xi >= 25 || yi >= 25 {
         return false;
     }
@@ -208,19 +208,19 @@ const fn check_pair(x: u8, y: u8, table: &[u32; 25]) -> bool {
 /// used for `allow_mz`.
 #[inline]
 #[must_use]
-pub const fn is_valid_chars(x: char, y: char, settings: Settings) -> bool {
+pub const fn is_valid(x: char, y: char, settings: Settings) -> bool {
     let settings = extract_settings!(settings; allow_mz);
-    check_pair(x as u8, y as u8, &VALID_TABLE) || settings.allow_mz && x == 'm' && y == 'z'
+    check_pair(x as u32, y as u32, &VALID_TABLE) || settings.allow_mz && x == 'm' && y == 'z'
     // todo more_configurable clusters
 }
 
 /// Returns whether `x` and `y` form a valid word-initial consonant cluster.
 #[inline]
 #[must_use]
-pub const fn is_initial_chars(x: char, y: char, settings: Settings) -> bool {
+pub const fn is_initial(x: char, y: char, settings: Settings) -> bool {
     #[allow(clippy::no_effect_underscore_binding, reason = "why does this lint exist")]
     let _settings = extract_settings!(settings; allow_mz); // todo more_configurable clusters
-    check_pair(x as u8, y as u8, &INITIAL_TABLE)
+    check_pair(x as u32, y as u32, &INITIAL_TABLE)
 }
 
 /// Returns whether `x`, `y`, and `z` form one of the consonant triples banned
@@ -228,7 +228,7 @@ pub const fn is_initial_chars(x: char, y: char, settings: Settings) -> bool {
 #[inline]
 #[must_use]
 // todo(j4tci): customize
-pub const fn is_banned_triple_chars(x: char, y: char, z: char) -> bool {
+pub const fn is_banned_triple(x: char, y: char, z: char) -> bool {
     x == 'n' && matches!([y, z], ['d', 'j' | 'z'] | ['t', 'c' | 's'])
 }
 
@@ -238,13 +238,13 @@ pub const fn is_banned_triple_chars(x: char, y: char, z: char) -> bool {
 #[must_use]
 pub const fn is_hard_onset(s: &str, settings: Settings) -> bool {
     match *s.as_bytes() {
-        [x] => is_in_set(x, ALL),
-        [x, y] => is_initial_chars(x as char, y as char, settings),
+        [x] => is_in_set(x as u32, ALL),
+        [x, y] => is_initial(x as char, y as char, settings),
         [x, y, z] => {
-            is_in_set(x, SIBILANT)
-                && is_in_set(z, LIQUID)
-                && is_initial_chars(x as char, y as char, settings)
-                && is_initial_chars(y as char, z as char, settings)
+            is_in_set(x as u32, SIBILANT)
+                && is_in_set(z as u32, LIQUID)
+                && is_initial(x as char, y as char, settings)
+                && is_initial(y as char, z as char, settings)
         }
         _ => false,
     }
@@ -258,4 +258,21 @@ pub const fn is_hard_onset(s: &str, settings: Settings) -> bool {
 #[must_use]
 pub const fn is_hyphen(s: &str) -> bool {
     matches!(s.as_bytes(), b"r" | b"n" | b"y" | b"'y" | b"y'" | b"'y'")
+}
+
+// - tests -
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        phonology::{is_hard_consonant, is_valid},
+        settings::Settings,
+    };
+    const CLL: Settings = Settings::CLL;
+    #[test]
+    fn doesnt_break_non_ascii() {
+        // u+0163 -> 0063 = c
+        assert!(!is_hard_consonant('ţ'));
+        assert!(!is_valid('ţ', 'l', CLL));
+    }
 }
