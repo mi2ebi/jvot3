@@ -22,8 +22,8 @@ use crate::{
     },
     phonology::{
         deannotate_glide, is_annotated_offglide, is_annotated_onglide, is_banned_triple,
-        is_consonant, is_diphthong, is_hard_consonant, is_sonorant, is_valid, is_vowel,
-        strip_stress_accent,
+        is_consonant, is_diphthong, is_hard_consonant, is_sonorant, is_stressed, is_valid,
+        is_vowel, strip_stress_accent,
     },
     settings::Settings,
     syllables::{
@@ -60,27 +60,46 @@ impl Unit {
     #[inline]
     #[must_use]
     pub const fn is_cmavo_only(&self) -> bool {
-        matches!(self, Self::Normal { pre_brivla_start: None, .. })
+        matches!(
+            self,
+            Self::Normal {
+                pre_brivla_start: None,
+                ..
+            }
+        )
     }
 
     /// Returns whether this unit is entirely a pre-brivla.
     #[inline]
     #[must_use]
     pub const fn is_pre_brivla_only(&self) -> bool {
-        matches!(self, Self::Normal { pre_brivla_start: Some(0), .. })
+        matches!(
+            self,
+            Self::Normal {
+                pre_brivla_start: Some(0),
+                ..
+            }
+        )
     }
 }
 
 impl Debug for Unit {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Normal { syllables, pre_brivla_start } => {
+            Self::Normal {
+                syllables,
+                pre_brivla_start,
+            } => {
                 for (i, s) in syllables.iter().enumerate() {
                     write!(
                         f,
                         "{}{}{s}",
                         if i > 0 { "," } else { "" },
-                        if *pre_brivla_start == Some(i) { "|" } else { "" }
+                        if *pre_brivla_start == Some(i) {
+                            "|"
+                        } else {
+                            ""
+                        }
                     )?;
                 }
                 Ok(())
@@ -115,7 +134,11 @@ fn pair_consonantal(chars: &[char]) -> Result<Vec<Syllable>, Jvofli> {
         .iter()
         .map(|&[a, b]| {
             if is_hard_consonant(a) && is_sonorant(b) && a != b {
-                Ok(Syllable { onset: Single(a), nucleus: Sonorant(b), coda: None })
+                Ok(Syllable {
+                    onset: Single(a),
+                    nucleus: Sonorant(b),
+                    coda: None,
+                })
             } else {
                 Err(invalid_from_pair(What::ConsonantalSyllable, a, b))
             }
@@ -136,7 +159,7 @@ fn split_into_coda_and_consonantal(
         && !chars.len().is_multiple_of(2)
         && let Some(&last) = chars.last()
         && let Some(coda) = Coda::new(last)
-        && let Ok(pairs) = pair_consonantal(&chars[.. chars.len() - 1])
+        && let Ok(pairs) = pair_consonantal(&chars[..chars.len() - 1])
     {
         return Ok((Some(coda), pairs));
     }
@@ -145,7 +168,10 @@ fn split_into_coda_and_consonantal(
     {
         return Ok((None, pairs));
     }
-    Err(Invalid { what: What::ConsonantRun, value: chars.iter().rev().collect::<String>() })
+    Err(Invalid {
+        what: What::ConsonantRun,
+        value: chars.iter().rev().collect::<String>(),
+    })
 }
 
 // - cmavo detection -
@@ -156,7 +182,7 @@ fn split_into_coda_and_consonantal(
 fn cmavo_tail_lengths(syllables: &[Syllable]) -> Vec<usize> {
     let n = syllables.len();
     let mut out = vec![0_usize; n];
-    for i in (0 .. n).rev() {
+    for i in (0..n).rev() {
         if syllables[i].could_continue_cmavo() {
             out[i] = 1 + out.get(i + 1).copied().unwrap_or(0);
         }
@@ -195,7 +221,9 @@ fn cmavo_permitted_after_y(
     if !(settings.arbitrary_cmavo_rafsi || is_cy_shaped) {
         return true;
     }
-    let Some(next_end) = try_one_cmavo(syllables, cmavo_tail_lens, end) else { return false };
+    let Some(next_end) = try_one_cmavo(syllables, cmavo_tail_lens, end) else {
+        return false;
+    };
     matches!(syllables[next_end - 1].nucleus, Y)
 }
 
@@ -210,8 +238,9 @@ fn cmavo_boundaries_from(
     let mut pos = start;
     let mut cached_next: Option<Option<usize>> = None;
     while pos < start + len {
-        let end =
-            cached_next.take().unwrap_or_else(|| try_one_cmavo(syllables, cmavo_tail_lens, pos));
+        let end = cached_next
+            .take()
+            .unwrap_or_else(|| try_one_cmavo(syllables, cmavo_tail_lens, pos));
         let Some(end) = end else { break };
         if end < start + len && matches!(syllables[end - 1].nucleus, Y) {
             let next_end = try_one_cmavo(syllables, cmavo_tail_lens, end);
@@ -230,8 +259,12 @@ fn cmavo_boundaries_from(
 /// belongs to, if any.
 fn cmavo_starts(syllables: &[Syllable]) -> Vec<usize> {
     let mut start = Vec::with_capacity(syllables.len());
-    for i in 0 .. syllables.len() {
-        start.push(if i > 0 && syllables[i].could_continue_cmavo() { start[i - 1] } else { i });
+    for i in 0..syllables.len() {
+        start.push(if i > 0 && syllables[i].could_continue_cmavo() {
+            start[i - 1]
+        } else {
+            i
+        });
     }
     start
 }
@@ -299,20 +332,36 @@ fn evidence_target_from(
     let mut next_blocker = vec![None; n + 1];
     let mut next_periphery = vec![None; n + 1];
     let mut next_nucleus = vec![None; n + 1];
-    for i in (0 .. n).rev() {
-        next_blocker[i] = if passes_evidence(i) { next_blocker[i + 1] } else { Some(i) };
-        next_periphery[i] = if periphery_evidence(i) { Some(i) } else { next_periphery[i + 1] };
-        next_nucleus[i] = if nucleus_evidence(i) { Some(i) } else { next_nucleus[i + 1] };
+    for i in (0..n).rev() {
+        next_blocker[i] = if passes_evidence(i) {
+            next_blocker[i + 1]
+        } else {
+            Some(i)
+        };
+        next_periphery[i] = if periphery_evidence(i) {
+            Some(i)
+        } else {
+            next_periphery[i + 1]
+        };
+        next_nucleus[i] = if nucleus_evidence(i) {
+            Some(i)
+        } else {
+            next_nucleus[i + 1]
+        };
     }
-    (0 .. n)
+    (0..n)
         .map(|start| {
-            let local_target =
-                [next_periphery[start], next_nucleus[start]].into_iter().flatten().min();
-            let remote_target = next_blocker[start].and_then(|b| next_nucleus[b + 1]).map(|i| {
-                prev_blocker[i].unwrap_or_else(|| {
-                    unreachable!("[evidence_target_from] a blocker >= `start` precedes `i`")
-                })
-            });
+            let local_target = [next_periphery[start], next_nucleus[start]]
+                .into_iter()
+                .flatten()
+                .min();
+            let remote_target = next_blocker[start]
+                .and_then(|b| next_nucleus[b + 1])
+                .map(|i| {
+                    prev_blocker[i].unwrap_or_else(|| {
+                        unreachable!("[evidence_target_from] a blocker >= `start` precedes `i`")
+                    })
+                });
             match (local_target, remote_target) {
                 (Some(a), Some(b)) => Some(a.min(b)),
                 (Some(a), None) => Some(a),
@@ -329,7 +378,11 @@ fn prepend_deferred_prefix(unit: &mut Unit, prefix: &mut VecDeque<Syllable>) {
     if prefix.is_empty() {
         return;
     }
-    let Unit::Normal { syllables, pre_brivla_start } = unit else {
+    let Unit::Normal {
+        syllables,
+        pre_brivla_start,
+    } = unit
+    else {
         unreachable!("[pdp] rs&s never produces cmevla for a deferred cmavo prefix")
     };
     let prefix_len = prefix.len();
@@ -371,7 +424,7 @@ fn resolve_stress_and_split(
     let mut next_stressable = vec![n; n + 1];
     let mut next_explicit = None;
     let mut next_stressable_idx = n;
-    for i in (0 .. n).rev() {
+    for i in (0..n).rev() {
         if syllables[i].nucleus.is_stressed() {
             next_explicit = Some(i);
         }
@@ -393,10 +446,13 @@ fn resolve_stress_and_split(
             boundaries =
                 cmavo_boundaries_from(syllables, &cmavo_tail_lens, settings, start, n - start);
         }
-        let seg = &syllables[start ..];
+        let seg = &syllables[start..];
         let seg_len = seg.len();
         if boundaries.last().copied() == Some(seg_len) {
-            let mut unit = Unit::Normal { syllables: seg.to_vec().into(), pre_brivla_start: None };
+            let mut unit = Unit::Normal {
+                syllables: seg.to_vec().into(),
+                pre_brivla_start: None,
+            };
             prepend_deferred_prefix(&mut unit, &mut deferred_prefix);
             units.push(unit);
             break;
@@ -407,12 +463,17 @@ fn resolve_stress_and_split(
         if seg_len < 2 {
             return Err(NotEnoughSyllables(seg[0].to_string()));
         }
-        let default_start_search = boundaries.iter().copied().enumerate().rev().find(|&(_, l)| {
-            l <= evidence_target
-                && seg_len - l >= 2
-                && !seg[l].onset.is_h()
-                && seg[l].nucleus.is_stressable()
-        });
+        let default_start_search = boundaries
+            .iter()
+            .copied()
+            .enumerate()
+            .rev()
+            .find(|&(_, l)| {
+                l <= evidence_target
+                    && seg_len - l >= 2
+                    && !seg[l].onset.is_h()
+                    && seg[l].nucleus.is_stressable()
+            });
         let Some((default_idx, default_start)) = default_start_search else {
             return Err(UnstressablePreBrivlaStart(seg[0].to_string()));
         };
@@ -424,7 +485,7 @@ fn resolve_stress_and_split(
         let default_start = if is_ccvhv {
             match default_idx.checked_sub(1) {
                 Some(prev_idx) => boundaries[prev_idx],
-                None => return Err(Slinkuhi(seg[default_start ..].iter().join(""))), /* even under noslinku'i! */
+                None => return Err(Slinkuhi(seg[default_start..].iter().join(""))), /* even under noslinku'i! */
             }
         } else {
             default_start
@@ -447,16 +508,23 @@ fn resolve_stress_and_split(
                      should always resolve."
                 )
             });
-            let mut syllables_vec: VecDeque<_> =
-                syllables[start .. start + seg_len].to_vec().into();
+            let mut syllables_vec: VecDeque<_> = syllables[start..start + seg_len].to_vec().into();
             syllables_vec[natural].nucleus.set_stressed(true);
-            let mut unit =
-                Unit::Normal { syllables: syllables_vec, pre_brivla_start: Some(default_start) };
+            let mut unit = Unit::Normal {
+                syllables: syllables_vec,
+                pre_brivla_start: Some(default_start),
+            };
             prepend_deferred_prefix(&mut unit, &mut deferred_prefix);
             units.push(unit);
             break;
         };
         if natural_stress == Some(stress_idx) {
+            if seg[default_start + 1..]
+                .iter()
+                .any(|s| s.nucleus.is_stressed())
+            {
+                return Err(InvalidStressPosition(seg[default_start].to_string()));
+            }
             let mut unit = Unit::Normal {
                 syllables: seg.to_vec().into(),
                 pre_brivla_start: Some(default_start),
@@ -469,11 +537,11 @@ fn resolve_stress_and_split(
         let r_hi = seg_len.min(next_stressable[stress_idx_abs] - start + 1);
         let r_lo = (stress_idx + 2).max(evidence_target + 1);
         let r_candidates: Vec<usize> = if r_lo <= r_hi {
-            (r_lo ..= r_hi)
+            (r_lo..=r_hi)
                 .filter(|&r| {
                     seg[r - 1].coda.is_none()
                         && seg.get(r).is_none_or(|s| !s.onset.is_h())
-                        && (stress_idx + 1 .. r).all(|j| !seg[j].nucleus.is_stressed())
+                        && (stress_idx + 1..r).all(|j| !seg[j].nucleus.is_stressed())
                 })
                 .collect()
         } else {
@@ -498,8 +566,10 @@ fn resolve_stress_and_split(
             if !seg[r - 1].nucleus.is_stressable() {
                 return Err(UnstressablePreBrivlaEnd(seg[r - 1].to_string()));
             }
-            let mut unit =
-                Unit::Normal { syllables: seg[.. r].to_vec().into(), pre_brivla_start: Some(l) };
+            let mut unit = Unit::Normal {
+                syllables: seg[..r].to_vec().into(),
+                pre_brivla_start: Some(l),
+            };
             prepend_deferred_prefix(&mut unit, &mut deferred_prefix);
             units.push(unit);
             start += r;
@@ -507,7 +577,7 @@ fn resolve_stress_and_split(
         }
         if stress_idx < default_start {
             // we know everything before the pre-brivla start is a cmavo prefix
-            deferred_prefix.extend(seg[.. default_start].iter().copied());
+            deferred_prefix.extend(seg[..default_start].iter().copied());
             start += default_start;
             continue;
         }
@@ -520,17 +590,29 @@ fn resolve_stress_and_split(
 
 /// Tries to merge `l` into `r`. Returns `Err(r)` if it can't.
 fn try_merging_units(l: &Unit, mut r: Unit, settings: Settings) -> Result<Unit, Unit> {
-    let Unit::Normal { syllables: l_syl, pre_brivla_start: None } = l else {
+    let Unit::Normal {
+        syllables: l_syl,
+        pre_brivla_start: None,
+    } = l
+    else {
         return Err(r);
     };
-    let Unit::Normal { syllables: r_syl, pre_brivla_start: r_pbs } = &mut r else {
+    let Unit::Normal {
+        syllables: r_syl,
+        pre_brivla_start: r_pbs,
+    } = &mut r
+    else {
         return Err(r);
     };
-    let Some(r_first) = r_syl.front().copied() else { return Err(r) };
+    let Some(r_first) = r_syl.front().copied() else {
+        return Err(r);
+    };
     if r_first.onset.is_empty() {
         return Err(r);
     }
-    let Some(l_last) = l_syl.back().copied() else { return Err(r) };
+    let Some(l_last) = l_syl.back().copied() else {
+        return Err(r);
+    };
     if let (Some(off), Onglide(on)) = (l_last.nucleus.get_offglide(), r_first.onset)
         && off == on
     {
@@ -539,7 +621,7 @@ fn try_merging_units(l: &Unit, mut r: Unit, settings: Settings) -> Result<Unit, 
     if matches!(l_last.nucleus, Y) {
         let l_vec: Vec<Syllable> = l_syl.iter().copied().collect();
         let start = cmavo_starts(&l_vec)[l_vec.len() - 1];
-        let mut window: Vec<Syllable> = l_vec[start ..].to_vec();
+        let mut window: Vec<Syllable> = l_vec[start..].to_vec();
         let end = window.len();
         window.extend(r_syl.iter().copied());
         let cmavo_tail_lens = cmavo_tail_lengths(&window);
@@ -563,8 +645,9 @@ fn try_merging_units(l: &Unit, mut r: Unit, settings: Settings) -> Result<Unit, 
 /// Checks that `input` only contains Lojban letters, then annotates glides so
 /// that *i* and *u* are unambiguous.
 fn annotate_glides(input: &str) -> Result<String, Jvofli> {
-    if let Some(bad) =
-        input.chars().find(|&c| !(is_consonant(c) || is_vowel(c) || is_annotated_offglide(c)))
+    if let Some(bad) = input
+        .chars()
+        .find(|&c| !(is_consonant(c) || is_vowel(c) || is_annotated_offglide(c)))
     {
         return Err(NonLojbanCharacter(bad));
     }
@@ -572,13 +655,17 @@ fn annotate_glides(input: &str) -> Result<String, Jvofli> {
         return Ok(input.to_string());
     }
     let mut chars = input.chars().collect_vec();
-    for i in (0 .. chars.len()).rev() {
+    for i in (0..chars.len()).rev() {
         let c = chars[i];
         let (base, stressed) = strip_stress_accent(c);
         if !matches!(base, 'i' | 'u') {
             continue;
         }
-        let (on, off) = if base == 'i' { ('q', 'ĭ') } else { ('w', 'ŭ') };
+        let (on, off) = if base == 'i' {
+            ('q', 'ĭ')
+        } else {
+            ('w', 'ŭ')
+        };
         let next_is_vowel = chars.get(i + 1).is_some_and(|&n| is_vowel(n));
         if next_is_vowel {
             if stressed {
@@ -618,7 +705,11 @@ fn check_cmevla(pg: &str, settings: Settings) -> Result<(), Jvofli> {
         let after = chars.get(i + 1).copied();
         if c != '\'' && after == Some(c) {
             return Err(invalid_from_pair(
-                if is_consonant(c) { What::Cluster } else { What::Nucleus },
+                if is_consonant(c) {
+                    What::Cluster
+                } else {
+                    What::Nucleus
+                },
                 c,
                 c,
             ));
@@ -729,7 +820,11 @@ impl<'a> Unitifier<'a> {
         if self.pending_consonants.len() > 1
             && let Some(pos) = self.pending_consonants.iter().position(|&c| c == '\'')
         {
-            let before = self.pending_consonants.get(pos + 1).copied().or(left_neighbor);
+            let before = self
+                .pending_consonants
+                .get(pos + 1)
+                .copied()
+                .or(left_neighbor);
             let after = if pos > 0 {
                 self.pending_consonants.get(pos - 1).copied()
             } else {
@@ -740,18 +835,21 @@ impl<'a> Unitifier<'a> {
         let n = self.pending_consonants.len();
         let mut best_err = None;
         let max_suffix = n.min(3);
-        for suffix_len in (1 ..= max_suffix).rev() {
-            let onset_chars: Vec<char> =
-                self.pending_consonants[.. suffix_len].iter().rev().copied().collect();
+        for suffix_len in (1..=max_suffix).rev() {
+            let onset_chars: Vec<char> = self.pending_consonants[..suffix_len]
+                .iter()
+                .rev()
+                .copied()
+                .collect();
             let onset_str: String = onset_chars.iter().collect();
             if let Err(e) = Onset::new(&onset_str, self.settings) {
-                let leftover = &self.pending_consonants[suffix_len ..];
+                let leftover = &self.pending_consonants[suffix_len..];
                 if split_into_coda_and_consonantal(leftover, may_try_coda).is_ok() {
                     best_err.get_or_insert(e);
                 }
                 continue;
             }
-            let leftover = &self.pending_consonants[suffix_len ..];
+            let leftover = &self.pending_consonants[suffix_len..];
             let (coda, pairs) = match split_into_coda_and_consonantal(leftover, may_try_coda) {
                 Ok(x) => x,
                 Err(e) => {
@@ -782,7 +880,8 @@ impl<'a> Unitifier<'a> {
             let onset = Onset::new(&onset_str, self.settings)?;
             let new_coda = coda;
             self.consonantal_syllable_buffer.clear();
-            self.consonantal_syllable_buffer.extend(pairs.into_iter().rev());
+            self.consonantal_syllable_buffer
+                .extend(pairs.into_iter().rev());
             self.pending_consonants.clear();
             return Ok((onset, new_coda));
         }
@@ -810,12 +909,18 @@ impl<'a> Unitifier<'a> {
             let old_coda = self.pending_coda.take();
             let (onset, new_coda) = self.resolve_pending_consonants(true, Some(c))?;
             if self.pending_nucleus.is_empty()
-                && let Some(&Syllable { onset: Onglide(g), .. }) = self.pending_unit.last()
+                && let Some(&Syllable {
+                    onset: Onglide(g), ..
+                }) = self.pending_unit.last()
             {
                 return Err(OnglideInCluster(g));
             }
             let nucleus = self.take_nucleus()?;
-            self.pending_unit.push(Syllable { onset, nucleus, coda: old_coda });
+            self.pending_unit.push(Syllable {
+                onset,
+                nucleus,
+                coda: old_coda,
+            });
             self.pending_unit.extend(&self.consonantal_syllable_buffer);
             self.pending_coda = new_coda;
             self.pending_nucleus.push(c);
@@ -827,7 +932,9 @@ impl<'a> Unitifier<'a> {
         };
         // diphthong time
         if is_diphthong(c, existing) {
-            if let Some(&Syllable { onset: Onglide(g), .. }) = self.pending_unit.last()
+            if let Some(&Syllable {
+                onset: Onglide(g), ..
+            }) = self.pending_unit.last()
                 && g == self.pending_nucleus[0]
             {
                 return Err(LongGlide(g));
@@ -854,7 +961,7 @@ impl<'a> Unitifier<'a> {
     /// emit a `Unit`.
     fn flush_group(&mut self, pg_start: usize) -> Result<(), Jvofli> {
         if self.in_cmevla {
-            let text = &self.input[pg_start .. self.pg_end];
+            let text = &self.input[pg_start..self.pg_end];
             check_cmevla(text, self.settings)?;
             self.units.push(Unit::Cmevla(text.to_string()));
             self.reset_pending();
@@ -865,15 +972,26 @@ impl<'a> Unitifier<'a> {
             let (onset, _) = self.resolve_pending_consonants(false, None)?;
             if !self.pending_nucleus.is_empty() {
                 let nucleus = self.take_nucleus()?;
-                self.pending_unit.push(Syllable { onset, nucleus, coda: old_coda });
+                self.pending_unit.push(Syllable {
+                    onset,
+                    nucleus,
+                    coda: old_coda,
+                });
                 self.pending_unit.extend(&self.consonantal_syllable_buffer);
-            } else if let Some(&Syllable { onset: Onglide(g), .. }) = self.pending_unit.last() {
+            } else if let Some(&Syllable {
+                onset: Onglide(g), ..
+            }) = self.pending_unit.last()
+            {
                 return Err(OnglideInCluster(g));
             }
         } else if !self.pending_nucleus.is_empty() {
             let coda = self.pending_coda.take();
             let nucleus = self.take_nucleus()?;
-            self.pending_unit.push(Syllable { onset: Empty, nucleus, coda });
+            self.pending_unit.push(Syllable {
+                onset: Empty,
+                nucleus,
+                coda,
+            });
         }
         if self.pending_unit.is_empty() {
             self.reset_pending();
@@ -917,7 +1035,9 @@ impl<'a> Unitifier<'a> {
         Ok(())
     }
 
-    fn handle_boundary_at_start(&mut self) -> Result<(), Jvofli> { self.flush_group(0) }
+    fn handle_boundary_at_start(&mut self) -> Result<(), Jvofli> {
+        self.flush_group(0)
+    }
 
     // - orchestrator -
 
