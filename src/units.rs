@@ -22,8 +22,8 @@ use crate::{
     },
     phonology::{
         deannotate_glide, is_annotated_offglide, is_annotated_onglide, is_banned_triple,
-        is_consonant, is_diphthong, is_hard_consonant, is_sonorant, is_stressed, is_valid,
-        is_vowel, strip_stress_accent,
+        is_consonant, is_diphthong, is_hard_consonant, is_sonorant, is_valid, is_vowel,
+        strip_stress_accent,
     },
     settings::Settings,
     syllables::{
@@ -831,6 +831,13 @@ impl<'a> Unitifier<'a> {
                 self.pending_nucleus.first().copied()
             };
             return Err(MisplacedApostrophe { before, after });
+        }
+        for w in self.pending_consonants.windows(2) {
+            if let &[r, l] = w
+                && !is_valid(l, r, self.settings)
+            {
+                return Err(invalid_from_pair(What::Cluster, l, r));
+            }
         }
         let n = self.pending_consonants.len();
         let mut best_err = None;

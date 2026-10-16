@@ -815,3 +815,14 @@ fn toblátá() {
         Err(InvalidStressPosition("blá".into()))
     );
 }
+
+#[test]
+fn xakdmru() {
+    assert_eq!(
+        unitify("xakdmru", CLL),
+        Err(Invalid {
+            what: What::Cluster,
+            value: "kd".into()
+        })
+    );
+}
