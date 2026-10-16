@@ -14,7 +14,6 @@ categories = ["text-processing", "parser-implementations", "command-line-utiliti
 # path = "src/main.rs"
 
 [dependencies]
-bimap = "0.6.3"
 flower-pot = "0.1.9"
 # fancy-regex = "0.18.0"
 itertools = "0.15.0"

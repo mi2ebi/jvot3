@@ -1,9 +1,5 @@
 //! Various fast lookups for consonant clusters and vowels.
 
-use std::sync::LazyLock;
-
-use bimap::BiHashMap;
-
 use crate::{extract_settings, settings::Settings};
 
 // - tables -
@@ -137,26 +133,24 @@ pub const fn deannotate_glide(c: char) -> char {
     }
 }
 
-static STRESS: LazyLock<BiHashMap<char, char>> = LazyLock::new(|| {
-    let mut m = BiHashMap::new();
-    m.insert('á', 'a');
-    m.insert('é', 'e');
-    m.insert('í', 'i');
-    m.insert('ó', 'o');
-    m.insert('ú', 'u');
-    m.insert('ý', 'y');
-    m
-});
-
 /// Removes the stress from a vowel, returning the plain vowel and whether it
 /// was stressed.
-pub fn strip_stress_accent(c: char) -> (char, bool) {
-    STRESS.get_by_left(&c).map_or((c, false), |&plain| (plain, true))
+#[must_use]
+pub const fn strip_stress_accent(c: char) -> (char, bool) {
+    match c {
+        'á' => ('a', true),
+        'é' => ('e', true),
+        'í' => ('i', true),
+        'ó' => ('o', true),
+        'ú' => ('u', true),
+        'ý' => ('y', true),
+        _ => (c, false),
+    }
 }
 
-#[must_use]
 /// Returns whether `c` is stressed.
-pub fn is_stressed(c: char) -> bool { strip_stress_accent(c).1 }
+#[must_use]
+pub const fn is_stressed(c: char) -> bool { strip_stress_accent(c).1 }
 
 /// Removes stress marks from everything.
 pub(crate) fn strip_all_stress(s: &str) -> String {
@@ -164,7 +158,18 @@ pub(crate) fn strip_all_stress(s: &str) -> String {
 }
 
 /// Adds explicit stress to a vowel.
-pub fn add_stress_accent(c: char) -> Option<char> { STRESS.get_by_right(&c).copied() }
+#[must_use]
+pub const fn add_stress_accent(c: char) -> Option<char> {
+    match c {
+        'a' => Some('á'),
+        'e' => Some('é'),
+        'i' => Some('í'),
+        'o' => Some('ó'),
+        'u' => Some('ú'),
+        'y' => Some('ý'),
+        _ => None,
+    }
+}
 
 // - consonants -
 

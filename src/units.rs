@@ -571,14 +571,14 @@ fn try_merging_units(l: &Unit, mut r: Unit, settings: Settings) -> Result<Unit, 
 
 /// Checks that `input` only contains Lojban letters, then annotates glides so
 /// that *i* and *u* are unambiguous.
-fn annotate_glides(input: &str) -> Result<String, Jvofli> {
+fn annotate_glides(input: &str) -> Result<Vec<char>, Jvofli> {
     if let Some(bad) =
         input.chars().find(|&c| !(is_consonant(c) || is_vowel(c) || is_annotated_offglide(c)))
     {
         return Err(NonLojbanCharacter(bad));
     }
     if input.find(['i', 'u', 'í', 'ú']).is_none() {
-        return Ok(input.to_string());
+        return Ok(input.chars().collect());
     }
     let mut chars = input.chars().collect_vec();
     for i in (0 .. chars.len()).rev() {
@@ -614,17 +614,16 @@ fn annotate_glides(input: &str) -> Result<String, Jvofli> {
             }
         }
     }
-    Ok(chars.into_iter().collect())
+    Ok(chars)
 }
 
 /// Checks that `pg` (already known to end in a hard consonant) is a plausible
 /// cmevla.
 fn check_cmevla(pg: &str, settings: Settings) -> Result<(), Jvofli> {
     let annotated = annotate_glides(pg)?;
-    let chars: Vec<char> = annotated.chars().collect();
-    for (i, &c) in chars.iter().enumerate() {
-        let before = i.checked_sub(1).map(|j| chars[j]);
-        let after = chars.get(i + 1).copied();
+    for (i, &c) in annotated.iter().enumerate() {
+        let before = i.checked_sub(1).map(|j| annotated[j]);
+        let after = annotated.get(i + 1).copied();
         if c != '\'' && after == Some(c) {
             return Err(invalid_from_pair(
                 if is_consonant(c) { What::Cluster } else { What::Nucleus },
