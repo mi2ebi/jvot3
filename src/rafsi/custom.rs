@@ -7,7 +7,7 @@ use itertools::Itertools as _;
 use crate::{
     jvofli::Jvofli::{self, LongRafsiAssignment, RafsiShapeTaken},
     rafsi::{
-        Shape::{ArbitraryCmavo, Complete, Truncated},
+        RafsiShape::{ArbitraryCmavo, Complete, Truncated},
         classify_rafsi,
     },
     settings::Settings,

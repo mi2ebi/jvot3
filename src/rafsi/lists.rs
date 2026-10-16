@@ -2241,8 +2241,8 @@ mod tests {
     use crate::{
         jvofli::Jvofli::{LongRafsiAssignment, RafsiShapeTaken},
         rafsi::{
+            RafsiShape::{Prefix, Truncated},
             Rafste,
-            Shape::{Prefix, Truncated},
         },
         settings::Settings,
     };

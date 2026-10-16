@@ -121,10 +121,7 @@ fn selójbonai() {
                 ],
                 pre_brivla_start: Some(1)
             },
-            Normal {
-                syllables: vdq![syllable!("n", "ai"; CLL)],
-                pre_brivla_start: None
-            }
+            Normal { syllables: vdq![syllable!("n", "ai"; CLL)], pre_brivla_start: None }
         ])
     );
 }
@@ -145,10 +142,7 @@ fn sélojbonai() {
 }
 #[test]
 fn selojbonái() {
-    assert_eq!(
-        unitify("selojbonái", CLL),
-        Err(InvalidStressPosition("nái".into()))
-    );
+    assert_eq!(unitify("selojbonái", CLL), Err(InvalidStressPosition("nái".into())));
 }
 #[test]
 fn lójbosélojbonai() {
@@ -205,18 +199,12 @@ fn ciai() {
 
 #[test]
 fn bytygau() {
-    assert_eq!(
-        unitify("bytygau", CLL),
-        Err(UnstressablePreBrivlaStart("by".into()))
-    );
+    assert_eq!(unitify("bytygau", CLL), Err(UnstressablePreBrivlaStart("by".into())));
 }
 
 #[test]
 fn krtyvla() {
-    assert_eq!(
-        unitify("krtyvla", CLL),
-        Err(UnstressablePreBrivlaStart("kr".into()))
-    );
+    assert_eq!(unitify("krtyvla", CLL), Err(UnstressablePreBrivlaStart("kr".into())));
 }
 
 #[test]
@@ -224,10 +212,7 @@ fn mi_ihe() {
     assert_eq!(
         unitify("mi i'e", CLL),
         Ok(vec![
-            Normal {
-                syllables: vdq![syllable!("m", "i"; CLL)],
-                pre_brivla_start: None
-            },
+            Normal { syllables: vdq![syllable!("m", "i"; CLL)], pre_brivla_start: None },
             Normal {
                 syllables: vdq![syllable!("", "i"; CLL), syllable!("'", "e"; CLL)],
                 pre_brivla_start: None
@@ -241,10 +226,7 @@ fn ai_iicmo() {
     assert_eq!(
         unitify("ai iicmo", CLL),
         Ok(vec![
-            Normal {
-                syllables: vdq![syllable!("", "ai"; CLL)],
-                pre_brivla_start: None
-            },
+            Normal { syllables: vdq![syllable!("", "ai"; CLL)], pre_brivla_start: None },
             Normal {
                 syllables: vdq![syllable!("i", "í"; CLL), syllable!("cm", "o"; CLL)],
                 pre_brivla_start: Some(0)
@@ -265,28 +247,16 @@ fn an() {
 
 #[test]
 fn ha() {
-    assert_eq!(
-        unitify("'a", CLL),
-        Err(MisplacedApostrophe {
-            before: None,
-            after: Some('a')
-        })
-    );
+    assert_eq!(unitify("'a", CLL), Err(MisplacedApostrophe { before: None, after: Some('a') }));
 }
 
 #[test]
 fn lojbónaiha() {
-    assert_eq!(
-        unitify("lojbónai'a", CLL),
-        Err(InvalidStressPosition("jbó".into()))
-    );
+    assert_eq!(unitify("lojbónai'a", CLL), Err(InvalidStressPosition("jbó".into())));
 }
 #[test]
 fn lojbónaihabla() {
-    assert_eq!(
-        unitify("lojbónai'abla", CLL),
-        Err(InvalidStressPosition("jbó".into()))
-    );
+    assert_eq!(unitify("lojbónai'abla", CLL), Err(InvalidStressPosition("jbó".into())));
 }
 
 #[test]
@@ -320,45 +290,27 @@ fn fyhahe() {
 }
 #[test]
 fn fryha() {
-    assert_eq!(
-        unitify("fry'a", CLL),
-        Err(UnstressablePreBrivlaStart("fry".into()))
-    );
+    assert_eq!(unitify("fry'a", CLL), Err(UnstressablePreBrivlaStart("fry".into())));
 }
 #[test]
 fn fryhahe() {
-    assert_eq!(
-        unitify("fry'a'e", CLL),
-        Err(UnstressablePreBrivlaStart("fry".into()))
-    );
+    assert_eq!(unitify("fry'a'e", CLL), Err(UnstressablePreBrivlaStart("fry".into())));
 }
 #[test]
 fn fryhable() {
-    assert_eq!(
-        unitify("fry'able", CLL),
-        Err(UnstressablePreBrivlaStart("fry".into()))
-    );
+    assert_eq!(unitify("fry'able", CLL), Err(UnstressablePreBrivlaStart("fry".into())));
 }
 #[test]
 fn frtahe() {
-    assert_eq!(
-        unitify("frta'e", CLL),
-        Err(UnstressablePreBrivlaStart("fr".into()))
-    );
+    assert_eq!(unitify("frta'e", CLL), Err(UnstressablePreBrivlaStart("fr".into())));
 }
 #[test]
 fn fytahe() {
-    assert_eq!(
-        unitify("fyta'e", CLL),
-        Err(UnstressablePreBrivlaStart("fy".into()))
-    );
+    assert_eq!(unitify("fyta'e", CLL), Err(UnstressablePreBrivlaStart("fy".into())));
 }
 #[test]
 fn frtable() {
-    assert_eq!(
-        unitify("frtable", CLL),
-        Err(UnstressablePreBrivlaStart("fr".into()))
-    );
+    assert_eq!(unitify("frtable", CLL), Err(UnstressablePreBrivlaStart("fr".into())));
 }
 #[test]
 fn pafrtahe() {
@@ -414,10 +366,7 @@ fn bácruda() {
                 syllables: vdq![syllable!("b", "á"; CLL), syllable!("cr", "u"; CLL)],
                 pre_brivla_start: Some(0)
             },
-            Normal {
-                syllables: vdq![syllable!("d", "a"; CLL)],
-                pre_brivla_start: None
-            }
+            Normal { syllables: vdq![syllable!("d", "a"; CLL)], pre_brivla_start: None }
         ])
     );
 }
@@ -440,10 +389,7 @@ fn bácrudárno() {
 
 #[test]
 fn málblánu() {
-    assert_eq!(
-        unitify("málblánu", CLL),
-        Err(InvalidStressPosition("mál".into()))
-    );
+    assert_eq!(unitify("málblánu", CLL), Err(InvalidStressPosition("mál".into())));
 }
 
 #[test]
@@ -460,10 +406,7 @@ fn cícozvátiti() {
                 ],
                 pre_brivla_start: Some(2)
             },
-            Normal {
-                syllables: vdq![syllable!("t", "i"; CLL)],
-                pre_brivla_start: None
-            }
+            Normal { syllables: vdq![syllable!("t", "i"; CLL)], pre_brivla_start: None }
         ])
     );
 }
@@ -490,10 +433,7 @@ fn máblanútrocícozvátiti() {
                 ],
                 pre_brivla_start: Some(2)
             },
-            Normal {
-                syllables: vdq![syllable!("t", "i"; CLL)],
-                pre_brivla_start: None
-            }
+            Normal { syllables: vdq![syllable!("t", "i"; CLL)], pre_brivla_start: None }
         ])
     );
 }
@@ -552,10 +492,7 @@ fn má_blaxekri() {
     assert_eq!(
         unitify("má blaxekri", CLL),
         Ok(vec![
-            Normal {
-                syllables: vdq![syllable!("m", "á"; CLL)],
-                pre_brivla_start: None
-            },
+            Normal { syllables: vdq![syllable!("m", "á"; CLL)], pre_brivla_start: None },
             Normal {
                 syllables: vdq![
                     syllable!("bl", "a"; CLL),
@@ -569,10 +506,7 @@ fn má_blaxekri() {
 }
 #[test]
 fn má_bla() {
-    assert_eq!(
-        unitify("má bla", CLL),
-        Err(NotEnoughSyllables("bla".into()))
-    );
+    assert_eq!(unitify("má bla", CLL), Err(NotEnoughSyllables("bla".into())));
 }
 #[test]
 fn mába() {
@@ -625,17 +559,11 @@ fn mí_nelcido() {
 
 #[test]
 fn bangy() {
-    assert_eq!(
-        unitify("bangy", CLL),
-        Err(UnstressablePreBrivlaEnd("gy".into()))
-    );
+    assert_eq!(unitify("bangy", CLL), Err(UnstressablePreBrivlaEnd("gy".into())));
 }
 #[test]
 fn vragy() {
-    assert_eq!(
-        unitify("vragy", CLL),
-        Err(UnstressablePreBrivlaEnd("gy".into()))
-    );
+    assert_eq!(unitify("vragy", CLL), Err(UnstressablePreBrivlaEnd("gy".into())));
 }
 
 #[test]
@@ -645,32 +573,17 @@ fn mi1() {
 
 #[test]
 fn akkan() {
-    assert_eq!(
-        unitify("akkan", CLL),
-        Err(Invalid {
-            what: What::Cluster,
-            value: "kk".into()
-        })
-    );
+    assert_eq!(unitify("akkan", CLL), Err(Invalid { what: What::Cluster, value: "kk".into() }));
 }
 #[test]
 fn aan() {
-    assert_eq!(
-        unitify("aan", CLL),
-        Err(Invalid {
-            what: What::Nucleus,
-            value: "aa".into()
-        })
-    );
+    assert_eq!(unitify("aan", CLL), Err(Invalid { what: What::Nucleus, value: "aa".into() }));
 }
 #[test]
 fn ahhan() {
     assert_eq!(
         unitify("a''an", CLL),
-        Err(MisplacedApostrophe {
-            before: Some('a'),
-            after: Some('\'')
-        })
+        Err(MisplacedApostrophe { before: Some('a'), after: Some('\'') })
     );
 }
 
@@ -689,10 +602,7 @@ fn íafak() {
 fn gy() {
     assert_eq!(
         unitify("gy", CLL),
-        Ok(vec![Normal {
-            syllables: vdq![syllable!("g", "y"; CLL)],
-            pre_brivla_start: None
-        }])
+        Ok(vec![Normal { syllables: vdq![syllable!("g", "y"; CLL)], pre_brivla_start: None }])
     );
 }
 #[test]
@@ -707,10 +617,7 @@ fn jegy() {
 }
 #[test]
 fn gyje() {
-    assert_eq!(
-        unitify("gyje", CLL),
-        Err(UnstressablePreBrivlaStart("gy".into()))
-    );
+    assert_eq!(unitify("gyje", CLL), Err(UnstressablePreBrivlaStart("gy".into())));
 }
 
 #[test]
@@ -777,10 +684,7 @@ fn pahy_valsi_cll() {
 }
 #[test]
 fn pahy_valsi_permissive() {
-    assert_ne!(
-        unitify("pa'y valsi", PERMISSIVE),
-        unitify("pa'yvalsi", PERMISSIVE)
-    );
+    assert_ne!(unitify("pa'y valsi", PERMISSIVE), unitify("pa'yvalsi", PERMISSIVE));
 }
 
 #[test]
@@ -788,10 +692,7 @@ fn gy_pabroda() {
     assert_eq!(
         unitify("gy pabroda", CLL),
         Ok(vec![
-            Normal {
-                syllables: vdq![syllable!("g", "y"; CLL)],
-                pre_brivla_start: None
-            },
+            Normal { syllables: vdq![syllable!("g", "y"; CLL)], pre_brivla_start: None },
             Normal {
                 syllables: vdq![
                     syllable!("p", "a"; CLL),
@@ -810,19 +711,10 @@ fn gy_gybroda() {
 
 #[test]
 fn toblátá() {
-    assert_eq!(
-        unitify("toblátá", CLL),
-        Err(InvalidStressPosition("blá".into()))
-    );
+    assert_eq!(unitify("toblátá", CLL), Err(InvalidStressPosition("blá".into())));
 }
 
 #[test]
 fn xakdmru() {
-    assert_eq!(
-        unitify("xakdmru", CLL),
-        Err(Invalid {
-            what: What::Cluster,
-            value: "kd".into()
-        })
-    );
+    assert_eq!(unitify("xakdmru", CLL), Err(Invalid { what: What::Cluster, value: "kd".into() }));
 }

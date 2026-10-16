@@ -14,7 +14,7 @@ use crate::{
 /// spreadsheet][it].
 ///
 /// [it]: https://docs.google.com/spreadsheets/d/e/2PACX-1vRr_nD2khJ-JdMAP9qnmuXz6c_veVaypf6ExFtKdf4H95wug2dN21ReE9gTpBnywo1S0Kj2ocAEWMF2/pubhtml
-pub enum Shape {
+pub enum RafsiShape {
     /// A cmavo that isn't an `End` rafsi, for `arbitrary_cmavo_rafsi`. Unlike
     /// `End`, these can only be followed by *y* hyphens, not *r*/*n*.
     ArbitraryCmavo,
@@ -34,7 +34,7 @@ pub enum Shape {
         h: bool,
     },
 }
-impl Display for Shape {
+impl Display for RafsiShape {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", match self {
             ArbitraryCmavo => "cmavo",
@@ -52,7 +52,7 @@ impl Display for Shape {
     }
 }
 
-use Shape::{ArbitraryCmavo, Complete, End, Nice, Prefix, Truncated};
+use RafsiShape::{ArbitraryCmavo, Complete, End, Nice, Prefix, Truncated};
 
 #[must_use]
 /// Returns whether `s` is exactly one cmavo.
@@ -67,7 +67,11 @@ pub fn is_one_cmavo(s: &str) -> bool {
     syllables.iter().filter(|s| !s.onset.is_h()).nth(1).is_none()
 }
 
-pub(crate) fn classify_rafsi(text: &str, next_char: Option<char>, settings: Settings) -> Shape {
+pub(crate) fn classify_rafsi(
+    text: &str,
+    next_char: Option<char>,
+    settings: Settings,
+) -> RafsiShape {
     debug_assert!(text.is_ascii(), "[classify_rafsi] {text} has non ascii");
     let elided = next_char == Some('y');
     let bytes = text.as_bytes();

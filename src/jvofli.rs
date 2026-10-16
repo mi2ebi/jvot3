@@ -4,7 +4,7 @@ use std::fmt::{self, Debug, Display};
 
 use thiserror::Error;
 
-use crate::rafsi::Shape;
+use crate::rafsi::RafsiShape;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(missing_docs, reason = "obvious")]
@@ -49,7 +49,7 @@ pub enum Jvofli {
     #[error("{{{0}}} may not be doubled when representing a glide both times")]
     LongGlide(char),
     #[error("{{{word}}} can't have {{{attempted}}} as a rafsi, because it's a {shape} rafsi")]
-    LongRafsiAssignment { word: String, shape: Shape, attempted: String },
+    LongRafsiAssignment { word: String, shape: RafsiShape, attempted: String },
     #[error(
         "{{'}} must be between two vowels, but has {} before it and {} after it",
         before.as_ref().map_or_else(|| "nothing".into(), |c| format!("{{{c}}}")),
@@ -66,7 +66,7 @@ pub enum Jvofli {
         "{{{word}}} already has the {shape} rafsi {{{existing}}}, so it can't also have \
          {{{attempted}}}"
     )]
-    RafsiShapeTaken { word: String, shape: Shape, existing: String, attempted: String },
+    RafsiShapeTaken { word: String, shape: RafsiShape, existing: String, attempted: String },
     #[error("{{{0}}} is a slinku'i")]
     Slinkuhi(String),
     #[error("{{{0}}} isn't stressable")]
