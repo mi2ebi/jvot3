@@ -459,8 +459,8 @@ fn resolve_stress_and_split(
             break;
         };
         if natural_stress == Some(stress_idx) {
-            if seg[default_start + 1 ..].iter().any(|s| s.nucleus.is_stressed()) {
-                return Err(InvalidStressPosition(seg[default_start].to_string()));
+            if seg[stress_idx + 1 ..].iter().any(|s| s.nucleus.is_stressed()) {
+                return Err(InvalidStressPosition(seg[stress_idx].to_string()));
             }
             let mut unit = Unit::Normal {
                 syllables: seg.to_vec().into(),

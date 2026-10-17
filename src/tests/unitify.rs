@@ -472,6 +472,10 @@ fn ma_blaxekri() {
     assert_eq!(unitify("ma blaxekri", CLL), unitify("mablaxekri", CLL));
 }
 #[test]
+fn mablaxékri() {
+    assert_eq!(unitify("mablaxékri", CLL), unitify("mablaxekri", CLL));
+}
+#[test]
 fn máblaxekri() {
     assert_eq!(
         unitify("máblaxekri", CLL),
