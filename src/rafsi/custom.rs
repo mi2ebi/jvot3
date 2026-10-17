@@ -56,16 +56,21 @@ impl Rafste {
     }
 
     pub(crate) fn assign_unchecked(&mut self, rafsi: &str, word: &str) -> Option<String> {
-        let old_word = self.by_rafsi.remove(rafsi);
-        if let Some(ref old_word) = old_word {
-            let Some(old_rafsi) = self.by_word.get_mut(old_word) else {
-                unreachable!("[Rafste::assign_unchecked] both directions of rafste should match")
-            };
-            old_rafsi.retain(|r| r != rafsi);
-        }
-        self.by_rafsi.insert(rafsi.to_string(), word.to_string());
+        let (owned_rafsi, old_word) = match self.by_rafsi.remove_entry(rafsi) {
+            Some((owned_rafsi, old_word)) => {
+                let Some(old_rafsi) = self.by_word.get_mut(&old_word) else {
+                    unreachable!(
+                        "[Rafste::assign_unchecked] both directions of rafste should match"
+                    )
+                };
+                old_rafsi.retain(|r| r != rafsi);
+                (owned_rafsi, Some(old_word))
+            }
+            None => (rafsi.to_string(), None),
+        };
+        self.by_rafsi.insert(owned_rafsi, word.to_string());
         self.by_word.entry(word.to_string()).or_default().push(rafsi.to_string());
-        old_word
+        old_word.filter(|w| w != word)
     }
 
     /// Checks that `attempted` is a short rafsi and that none of the `earlier`
@@ -97,18 +102,26 @@ impl Rafste {
         Ok(())
     }
 
+    /// # Panics
+    ///
+    /// If any rafsi is assigned multiple times.
     pub(crate) fn from_words(words: &[(&'static str, &'static [&'static str])]) -> Self {
-        let mut by_rafsi = HashMap::new();
-        let mut by_word = HashMap::new();
-        for (word, rafsi) in words {
-            let rafsi = rafsi.iter().map(ToString::to_string).collect::<Vec<_>>();
-            for r in &rafsi {
-                let old_word = by_rafsi.insert(r.clone(), word.to_string());
-                debug_assert!(old_word.is_none(), "rafsi {{{r}}} assigned to multiple words");
+        let mut result = Self::empty();
+        for &(word, rafsi) in words {
+            assert!(!result.by_word.contains_key(word), "word {{{word}}} appears multiple times");
+            result.add_word(word);
+            for &r in rafsi {
+                assert!(
+                    !result.marafsi(word).unwrap_or(&[]).iter().any(|x| x == r),
+                    "rafsi {{{r}}} assigned to {{{word}}} multiple times"
+                );
+                assert!(
+                    result.assign_unchecked(r, word).is_none(),
+                    "rafsi {{{r}}} assigned to multiple words"
+                );
             }
-            by_word.insert(word.to_string(), rafsi);
         }
-        Self { by_rafsi, by_word }
+        result
     }
 
     /// Checks every word's rafsi against the same rules [`Rafste::assign`]
@@ -118,18 +131,31 @@ impl Rafste {
     /// All violations found in word order (and within a word, in insertion
     /// order).
     pub fn validate(&self, settings: Settings) -> Result<(), Vec<Jvofli>> {
-        let errors: Vec<Jvofli> = self
-            .by_word
-            .iter()
-            .sorted_by_key(|(word, _)| *word)
-            .flat_map(|(word, rafsi)| {
-                rafsi
-                    .iter()
-                    .enumerate()
-                    .map(move |(i, r)| Self::check_against(&rafsi[.. i], r, word, settings))
-            })
-            .filter_map(Result::err)
-            .collect();
+        let mut errors = Vec::new();
+        for (word, rafsi) in self.by_word.iter().sorted_by_key(|(word, _)| *word) {
+            let mut first_by_shape = HashMap::<_, &str>::with_capacity(rafsi.len());
+            for r in rafsi {
+                let shape = classify_rafsi(r, None, settings);
+                if matches!(shape, Complete | Truncated | ArbitraryCmavo) {
+                    errors.push(LongRafsiAssignment {
+                        word: word.clone(),
+                        shape,
+                        attempted: r.clone(),
+                    });
+                    continue;
+                }
+                if let Some(existing) = first_by_shape.get(&shape) {
+                    errors.push(RafsiShapeTaken {
+                        word: word.clone(),
+                        shape,
+                        existing: existing.to_string(),
+                        attempted: r.clone(),
+                    });
+                } else {
+                    first_by_shape.insert(shape, r.as_str());
+                }
+            }
+        }
         if errors.is_empty() { Ok(()) } else { Err(errors) }
     }
 
@@ -148,7 +174,8 @@ impl Rafste {
     /// Gets the word `rafsi` is assigned to, if it exists.
     pub fn rafsima(&self, rafsi: &str) -> Option<&String> { self.by_rafsi.get(rafsi) }
 
-    /// Tries to get a list of the rafsi `word` has.
+    #[must_use]
+    /// Tries to get the rafsi `word` has, in assignment order.
     pub fn marafsi(&self, word: &str) -> Option<&[String]> {
         self.by_word.get(word).map(Vec::as_slice)
     }

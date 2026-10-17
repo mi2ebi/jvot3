@@ -7,5 +7,5 @@ pub mod lists;
 pub mod shapes;
 
 pub use custom::Rafste;
-pub use shapes::is_one_cmavo;
-pub(crate) use shapes::{RafsiShape, classify_rafsi};
+pub(crate) use shapes::classify_rafsi;
+pub use shapes::{RafsiShape, is_one_cmavo};

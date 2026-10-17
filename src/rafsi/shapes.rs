@@ -9,7 +9,7 @@ use crate::{
     units::{Unit, unitify},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 /// A rafsi shape. The variant names are inspired by [Mati's better-rafsi-list
 /// spreadsheet][it].
 ///
