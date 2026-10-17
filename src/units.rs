@@ -14,8 +14,8 @@ use crate::{
     extract_settings,
     jvofli::{
         Jvofli::{
-            self, Invalid, InvalidStressPosition, LongGlide, MisplacedApostrophe,
-            NonLojbanCharacter, NotEnoughSyllables, OnglideInCluster, Slinkuhi, Unstressable,
+            self, CCVhV, Invalid, InvalidStressPosition, LongGlide, MisplacedApostrophe,
+            NonLojbanCharacter, NotEnoughSyllables, OnglideInCluster, Unstressable,
             UnstressablePreBrivlaEnd, UnstressablePreBrivlaStart,
         },
         What, invalid_cluster_from_triple, invalid_from_pair,
@@ -426,7 +426,7 @@ fn resolve_stress_and_split(
         let default_start = if is_ccvhv {
             match default_idx.checked_sub(1) {
                 Some(prev_idx) => boundaries[prev_idx],
-                None => return Err(Slinkuhi(seg[default_start ..].iter().join(""))), /* even under noslinku'i! */
+                None => return Err(CCVhV(seg[default_start ..].iter().join(""))), /* even under noslinku'i! */
             }
         } else {
             default_start
@@ -971,8 +971,8 @@ impl<'a> Unitifier<'a> {
 /// - [`MisplacedApostrophe`]
 /// - [`NotEnoughSyllables`]
 /// - [`InvalidStressPosition`]: explicit stress doesn't fall on a valid penult
-/// - [`Slinkuhi`]: specifically for CCV'V units, as those are banned even under
-///   `settings.no_slinkuhi`
+/// - [`CCVhV`]: slinku'i specifically for CCV'V units, as those are banned even
+///   under `settings.no_slinkuhi`
 pub fn unitify(s: &str, settings: Settings) -> Result<Vec<Unit>, Jvofli> {
     Unitifier::new(s, settings).run()
 }

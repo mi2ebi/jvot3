@@ -3,8 +3,8 @@ use std::collections::VecDeque;
 use crate::{
     jvofli::{
         Jvofli::{
-            Invalid, InvalidStressPosition, MisplacedApostrophe, NonLojbanCharacter,
-            NotEnoughSyllables, OnglideInCluster, Slinkuhi, Unstressable, UnstressablePreBrivlaEnd,
+            CCVhV, Invalid, InvalidStressPosition, MisplacedApostrophe, NonLojbanCharacter,
+            NotEnoughSyllables, OnglideInCluster, Unstressable, UnstressablePreBrivlaEnd,
             UnstressablePreBrivlaStart,
         },
         What,
@@ -593,7 +593,7 @@ fn ahhan() {
 
 #[test]
 fn blahi() {
-    assert_eq!(unitify("bla'i", CLL), Err(Slinkuhi("bla'i".into())));
+    assert_eq!(unitify("bla'i", CLL), Err(CCVhV("bla'i".into())));
 }
 
 #[test]

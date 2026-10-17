@@ -67,8 +67,8 @@ pub enum Jvofli {
          {{{attempted}}}"
     )]
     RafsiShapeTaken { word: String, shape: RafsiShape, existing: String, attempted: String },
-    #[error("{{{0}}} is a slinku'i")]
-    Slinkuhi(String),
+    #[error("{{{0}}} is a CCV'V slinku'i, which is never valid")]
+    CCVhV(String),
     #[error("{{{0}}} isn't stressable")]
     Unstressable(String),
     #[error("{{{0}}} is at the start of a pre-brivla but it isn't stressable")]
