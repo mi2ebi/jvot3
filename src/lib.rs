@@ -9,7 +9,8 @@
     unreachable_pub,
     clippy::must_use_candidate,
     // clippy::unreachable,
-    clippy::print_stderr
+    clippy::print_stderr,
+    clippy::print_stdout
 )]
 
 pub mod jvofli;
