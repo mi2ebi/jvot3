@@ -1,4 +1,4 @@
-//! MSRV: `1.88.0`.
+//! MSRV: `1.89.0`.
 
 #![warn(
     clippy::unwrap_used,
